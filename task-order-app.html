@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ELO Task Prioritizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f5f7fa; color: #333; }
+        h1, h2 { color: #2c3e50; text-align: center; }
+        .container { background-color: white; border-radius: 8px; padding: 20px; margin: 15px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .upload-container { border: 2px dashed #3498db; text-align: center; }
+        button { background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; transition: background-color 0.3s; }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .comparison-container { display: none; justify-content: space-between; gap: 8px; margin: 20px 0; }
+        .task-card { background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; width: 45%; cursor: pointer; transition: transform 0.2s; }
+        .task-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .moved-up { background-color: #d4efdf !important; }
+        .moved-down { background-color: #f9e7e7 !important; }
+        .progress-bar-container { width: 100%; background-color: #e0e0e0; border-radius: 4px; margin: 10px 0; height: 8px; }
+        .progress-bar { height: 100%; border-radius: 4px; background-color: #3498db; width: 0%; transition: width 0.5s; }
+        .status { text-align: center; margin: 10px 0; font-style: italic; color: #7f8c8d; }
+        .center { text-align: center; }
+        .slider-container { margin: 10px 0; }
+        .slider-container label { display: block; margin-bottom: 5px; }
+        .position-change { margin-left: 5px; font-weight: bold; }
+        .up { color: #27ae60; }
+        .down { color: #e74c3c; }
+        #resultContainer {overflow: scroll;}
+        /* New styles */
+        .task-card.changed { animation: pulse 1.5s; }
+        #undoButton { background-color: #e74c3c; }
+        #undoButton:hover { background-color: #c0392b; }
+        .task-id { font-size: 0.85em; color: #7f8c8d; margin-bottom: 8px; }
+        
+        @media only screen and (max-width: 600px) {
+            .comparison-container {
+                flex-direction: column;
+            }
+            .task-card {
+                width: 90%;
+            }
+        }
+
+        @keyframes pulse {
+            0% { background-color: white; }
+            50% { background-color: #ffe6cc; }
+            100% { background-color: white; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Orderer</h1>
+    
+    <div class="container upload-container">
+        <h2>Upload Task List</h2>
+        <p>Upload an Excel file with task IDs in the first column and descriptions in the second column</p>
+        <input type="file" id="fileUpload" accept=".xlsx, .xls">
+        <button id="loadButton">Load Tasks</button>
+    </div>
+
+    <div class="container" id="settingsContainer" style="display:none;">
+        <h2>ELO Settings</h2>
+        <div class="slider-container">
+            <label>K-factor: <span id="kFactorValue">32</span></label>
+            <input type="range" id="kFactorSlider" min="8" max="64" value="32" step="4">
+        </div>
+        <div class="slider-container">
+            <label>Min. Comparisons per Task: <span id="minCompsValue">3</span></label>
+            <input type="range" id="minCompsSlider" min="1" max="10" value="3" step="1">
+        </div>
+        <button id="startButton">Start Comparisons</button>
+    </div>
+
+    <div class="status" id="status"></div>
+    <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="comparison-container" id="comparisonContainer">
+        <div class="task-card" id="taskA">
+            <div class="task-id" id="taskAId"></div>
+            <h3>Task A</h3>
+            <p id="taskADescription"></p>
+            <p id="taskARating" style="font-size: 0.9em; color: #7f8c8d;"></p>
+        </div>
+        <div class="task-card" id="taskB">
+            <div class="task-id" id="taskBId"></div>
+            <h3>Task B</h3>
+            <p id="taskBDescription"></p>
+            <p id="taskBRating" style="font-size: 0.9em; color: #7f8c8d;"></p>
+        </div>
+    </div>
+
+    <div class="center">
+        <button id="undoButton" style="display:none;">Undo Comparison</button>
+        <button id="skipButton" style="display:none;">Skip Comparison</button>
+    </div>
+
+    <div class="container" id="resultContainer" style="display:none;">
+        <h2>Ordered Task List</h2>
+        <button id="exportButton">Export to Excel</button>
+        <button id="moreComparisonsButton">Add More Comparisons</button>
+        <table id="resultTable">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Task ID</th>
+                    <th>Task Description</th>
+                    <th>ELO</th>
+                    <th>Comparisons</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // Global variables
+        let tasks = [], taskIds = [], currentPair = [], taskRatings = {}, taskComparisonCount = {}, 
+            previousRanks = {}, taskStatus = {}, comparisonHistory = [], 
+            completedComparisons = 0, requiredComparisons = 0, comparisonQueue = [],
+            kFactor = 32, minComparisonsPerTask = 3, lastComparison = null,
+            previousTaskIndices = [null, null]; // Store indices instead of IDs
+
+        // DOM elements
+        const elements = {
+            fileUpload: document.getElementById('fileUpload'),
+            loadButton: document.getElementById('loadButton'),
+            settingsContainer: document.getElementById('settingsContainer'),
+            kFactorSlider: document.getElementById('kFactorSlider'),
+            kFactorValue: document.getElementById('kFactorValue'),
+            minCompsSlider: document.getElementById('minCompsSlider'),
+            minCompsValue: document.getElementById('minCompsValue'),
+            startButton: document.getElementById('startButton'),
+            comparisonContainer: document.getElementById('comparisonContainer'),
+            taskA: document.getElementById('taskA'),
+            taskB: document.getElementById('taskB'),
+            taskAId: document.getElementById('taskAId'),
+            taskBId: document.getElementById('taskBId'),
+            taskADescription: document.getElementById('taskADescription'),
+            taskBDescription: document.getElementById('taskBDescription'),
+            taskARating: document.getElementById('taskARating'),
+            taskBRating: document.getElementById('taskBRating'),
+            resultContainer: document.getElementById('resultContainer'),
+            resultBody: document.getElementById('resultBody'),
+            exportButton: document.getElementById('exportButton'),
+            skipButton: document.getElementById('skipButton'),
+            undoButton: document.getElementById('undoButton'),
+            progressBar: document.getElementById('progressBar'),
+            status: document.getElementById('status'),
+            moreComparisonsButton: document.getElementById('moreComparisonsButton')
+        };
+
+        // Event listeners for sliders
+        elements.kFactorSlider.addEventListener('input', function() {
+            kFactor = parseInt(this.value);
+            elements.kFactorValue.textContent = kFactor;
+        });
+
+        elements.minCompsSlider.addEventListener('input', function() {
+            minComparisonsPerTask = parseInt(this.value);
+            elements.minCompsValue.textContent = minComparisonsPerTask;
+        });
+
+        // Load tasks from Excel file
+        elements.loadButton.addEventListener('click', function() {
+            const file = elements.fileUpload.files[0];
+            if (!file) { alert('Please select an Excel file'); return; }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                // Extract task IDs and descriptions from the Excel file
+                taskIds = [];
+                tasks = [];
+                
+                jsonData.forEach(row => {
+                    if (row && row.length >= 2 && row[0] && row[1]) {
+                        taskIds.push(row[0].toString()); // Convert ID to string to handle numbers
+                        tasks.push(row[1].toString());
+                    }
+                });
+                
+                if (tasks.length < 2) { alert('Need at least 2 tasks to compare'); return; }
+
+                elements.settingsContainer.style.display = 'block';
+                
+                // Initialize task data
+                tasks.forEach((task, index) => {
+                    taskRatings[index] = 1500;
+                    taskComparisonCount[index] = 0;
+                    taskStatus[index] = 'Not rated';
+                    previousRanks[index] = index;
+                });
+                
+                requiredComparisons = Math.min(tasks.length * minComparisonsPerTask / 2, tasks.length * (tasks.length - 1) / 2);
+                elements.status.textContent = `Loaded ${tasks.length} tasks. Estimated comparisons needed: ~${Math.ceil(requiredComparisons)}`;
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Start comparisons
+        elements.startButton.addEventListener('click', function() {
+            elements.settingsContainer.style.display = 'none';
+            generateComparisonQueue();
+            showNextComparison();
+            elements.skipButton.style.display = 'inline-block';
+            elements.undoButton.style.display = 'inline-block';
+            elements.resultContainer.style.display = 'block';
+            updateResultTable();
+        });
+
+        // Generate optimized comparison queue
+        function generateComparisonQueue() {
+            comparisonQueue = [];
+            
+            // Get under-compared tasks
+            let underComparedTasks = Object.keys(taskComparisonCount)
+                .filter(index => taskComparisonCount[index] < minComparisonsPerTask)
+                .map(index => parseInt(index));
+            
+            // If all tasks have minimum comparisons, compare closest ratings
+            if (underComparedTasks.length === 0) {
+                const sortedTasks = Object.keys(taskRatings)
+                    .map(index => parseInt(index))
+                    .sort((a, b) => taskRatings[a] - taskRatings[b]);
+                
+                for (let i = 0; i < sortedTasks.length - 1; i++) {
+                    comparisonQueue.push([sortedTasks[i], sortedTasks[i+1]]);
+                }
+            } else {
+                // Prioritize under-compared tasks
+                underComparedTasks.forEach(taskIndex => {
+                    const opponents = Object.keys(taskRatings)
+                        .map(index => parseInt(index))
+                        .filter(index => index !== taskIndex)
+                        .sort((a, b) => Math.abs(taskRatings[a] - taskRatings[taskIndex]) - 
+                                        Math.abs(taskRatings[b] - taskRatings[taskIndex]));
+                    
+                    for (let i = 0; i < Math.min(3, opponents.length); i++) {
+                        const pair = [taskIndex, opponents[i]].sort();
+                        if (!comparisonHistory.some(comp => comp[0] === pair[0] && comp[1] === pair[1])) {
+                            comparisonQueue.push(pair);
+                        }
+                    }
+                });
+            }
+            
+            // Shuffle and remove duplicates
+            shuffleArray(comparisonQueue);
+            comparisonQueue = Array.from(new Set(comparisonQueue.map(JSON.stringify)), JSON.parse);
+        }
+
+        // Show next comparison
+        function showNextComparison() {
+            // Disable undo button when no comparison to undo
+            elements.undoButton.disabled = !lastComparison;
+            
+            if (comparisonQueue.length === 0) {
+                const underComparedTasks = Object.keys(taskComparisonCount)
+                    .filter(index => taskComparisonCount[index] < minComparisonsPerTask);
+                
+                if (underComparedTasks.length > 0 && completedComparisons < tasks.length * (tasks.length - 1) / 2) {
+                    generateComparisonQueue();
+                    showNextComparison();
+                    return;
+                }
+                
+                elements.comparisonContainer.style.display = 'none';
+                elements.skipButton.style.display = 'none';
+                elements.status.textContent = 'All necessary comparisons complete!';
+                return;
+            }
+            
+            currentPair = comparisonQueue.shift();
+            const [indexA, indexB] = currentPair;
+            
+            /* // Check for index changes and add highlight if needed
+            elements.taskA.classList.remove('changed');
+            elements.taskB.classList.remove('changed');
+            
+            if (previousTaskIndices[0] !== null && previousTaskIndices[0] !== indexA) {
+                elements.taskA.classList.add('changed');
+            }
+            
+            if (previousTaskIndices[1] !== null && previousTaskIndices[1] !== indexB) {
+                elements.taskB.classList.add('changed');
+            } */
+            
+            // Update the task displays
+            elements.taskAId.textContent = `ID: ${taskIds[indexA]}`;
+            elements.taskBId.textContent = `ID: ${taskIds[indexB]}`;
+            elements.taskADescription.textContent = tasks[indexA];
+            elements.taskBDescription.textContent = tasks[indexB];
+            elements.taskARating.textContent = `Rating: ${Math.round(taskRatings[indexA])} (${taskComparisonCount[indexA]} comparisons)`;
+            elements.taskBRating.textContent = `Rating: ${Math.round(taskRatings[indexB])} (${taskComparisonCount[indexB]} comparisons)`;
+            
+            // Store the current indices for the next comparison
+            previousTaskIndices = [indexA, indexB];
+            
+            elements.comparisonContainer.style.display = 'flex';
+            elements.status.textContent = `Comparison ${completedComparisons + 1} of ~${Math.ceil(requiredComparisons)}`;
+            updateProgressBar();
+        }
+
+        // Event listeners for comparison actions
+        elements.taskA.addEventListener('click', function() {
+            if (currentPair.length === 2) {
+                const [indexA, indexB] = currentPair;
+                
+                // Save current state for undo
+                saveStateForUndo(indexA, indexB);
+                
+                updateEloRatings(indexA, indexB, 1); // A wins
+                recordComparison(indexA, indexB);
+            }
+        });
+
+        elements.taskB.addEventListener('click', function() {
+            if (currentPair.length === 2) {
+                const [indexA, indexB] = currentPair;
+                
+                // Save current state for undo
+                saveStateForUndo(indexA, indexB);
+                
+                updateEloRatings(indexA, indexB, 0); // B wins
+                recordComparison(indexA, indexB);
+            }
+        });
+
+        elements.skipButton.addEventListener('click', showNextComparison);
+        
+        // Undo button functionality
+        elements.undoButton.addEventListener('click', function() {
+            if (!lastComparison) return;
+            
+            const [indexA, indexB] = lastComparison;
+            
+            // Restore previous ratings
+            const previousTaskRatings = comparisonHistory.pop().previousRatings;
+            taskRatings[indexA] = previousTaskRatings[indexA];
+            taskRatings[indexB] = previousTaskRatings[indexB];
+            
+            // Decrement comparison counts
+            taskComparisonCount[indexA]--;
+            taskComparisonCount[indexB]--;
+            
+            // Update status if necessary
+            if (taskComparisonCount[indexA] === 0) taskStatus[indexA] = 'Not rated';
+            if (taskComparisonCount[indexB] === 0) taskStatus[indexB] = 'Not rated';
+            
+            completedComparisons--;
+            
+            // Add comparison back to queue for another try
+            comparisonQueue.unshift([indexA, indexB]);
+            
+            // Clear last comparison since we've used it
+            lastComparison = null;
+            elements.undoButton.disabled = true;
+            
+            // Update UI
+            updateResultTable();
+            updateProgressBar();
+            showNextComparison();
+        });
+        
+        elements.moreComparisonsButton.addEventListener('click', function() {
+            requiredComparisons += tasks.length;
+            generateComparisonQueue();
+            if (elements.comparisonContainer.style.display === 'none') {
+                showNextComparison();
+                elements.skipButton.style.display = 'inline-block';
+                elements.undoButton.style.display = 'inline-block';
+            }
+            updateProgressBar();
+        });
+
+        // Save current state for undo
+        function saveStateForUndo(indexA, indexB) {
+            lastComparison = [indexA, indexB];
+            
+            // Store previous ratings for undo operation
+            const previousRatings = {};
+            previousRatings[indexA] = taskRatings[indexA];
+            previousRatings[indexB] = taskRatings[indexB];
+            
+            // Add to comparison history with saved ratings
+            comparisonHistory.push({
+                indexA: indexA,
+                indexB: indexB,
+                previousRatings: previousRatings
+            });
+        }
+
+        // Record comparison and move to next
+        function recordComparison(indexA, indexB) {
+            taskStatus[indexA] = taskStatus[indexB] = 'Rated';
+            taskComparisonCount[indexA]++;
+            taskComparisonCount[indexB]++;
+            completedComparisons++;
+            
+            // Save current ranks for position change tracking
+            savePreviousRanks();
+            updateResultTable();
+            showNextComparison();
+        }
+
+        // Save current ranks for change tracking
+        function savePreviousRanks() {
+            const sortedTasks = Object.keys(taskRatings)
+                .map(index => parseInt(index))
+                .sort((a, b) => taskRatings[b] - taskRatings[a]);
+            
+            sortedTasks.forEach((taskIndex, rank) => {
+                previousRanks[taskIndex] = rank;
+            });
+        }
+
+        // Update ELO ratings
+        function updateEloRatings(indexA, indexB, outcome) {
+            const expectedA = 1 / (1 + Math.pow(10, (taskRatings[indexB] - taskRatings[indexA]) / 400));
+            taskRatings[indexA] = taskRatings[indexA] + kFactor * (outcome - expectedA);
+            taskRatings[indexB] = taskRatings[indexB] + kFactor * ((1 - outcome) - (1 - expectedA));
+        }
+
+        // Update the progress bar
+        function updateProgressBar() {
+            const percentage = Math.min(100, (completedComparisons / requiredComparisons) * 100);
+            elements.progressBar.style.width = `${percentage}%`;
+        }
+
+        // Update result table
+        function updateResultTable() {
+            const sortedTasks = Object.keys(taskRatings)
+                .map(index => ({
+                    index: parseInt(index),
+                    id: taskIds[index],
+                    description: tasks[index],
+                    rating: taskRatings[index],
+                    comparisons: taskComparisonCount[index],
+                    status: taskStatus[index],
+                    previousRank: previousRanks[index]
+                }))
+                .sort((a, b) => b.rating - a.rating);
+            
+            elements.resultBody.innerHTML = '';
+            
+            sortedTasks.forEach((task, rank) => {
+                const row = document.createElement('tr');
+                
+                // Determine position change
+                let positionChangeClass = '';
+                let positionChangeIcon = '';
+                
+                if (completedComparisons > 0) {
+                    if (task.previousRank > rank) {
+                        positionChangeClass = 'moved-up';
+                        positionChangeIcon = `<span class="position-change up">↑ ${task.previousRank - rank}</span>`;
+                    } else if (task.previousRank < rank) {
+                        positionChangeClass = 'moved-down';
+                        positionChangeIcon = `<span class="position-change down">↓ ${rank - task.previousRank}</span>`;
+                    }
+                }
+                
+                row.className = positionChangeClass;
+                
+                row.innerHTML = `
+                    <td>${rank + 1}${positionChangeIcon}</td>
+                    <td>${task.id}</td>
+                    <td>${task.description}</td>
+                    <td>${Math.round(task.rating)}</td>
+                    <td>${task.comparisons}</td>
+                    <td>${task.status}</td>
+                `;
+                
+                elements.resultBody.appendChild(row);
+                
+                // Remove highlight after animation
+                if (positionChangeClass) {
+                    setTimeout(() => {
+                        row.className = '';
+                    }, 2000);
+                }
+            });
+        }
+
+        // Export results to Excel
+        elements.exportButton.addEventListener('click', function() {
+            const sortedTasks = Object.keys(taskRatings)
+                .map(index => ({
+                    Rank: 0,
+                    'Task ID': taskIds[index],
+                    Description: tasks[index],
+                    'ELO Rating': Math.round(taskRatings[index]),
+                    Comparisons: taskComparisonCount[index],
+                    Status: taskStatus[index]
+                }))
+                .sort((a, b) => b['ELO Rating'] - a['ELO Rating']);
+            
+            sortedTasks.forEach((task, index) => { task.Rank = index + 1; });
+            
+            const ws = XLSX.utils.json_to_sheet(sortedTasks);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Task Priorities');
+            XLSX.writeFile(wb, 'task_order.xlsx');
+        });
+
+        // Utility function to shuffle array
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+    </script>
+</body>
+</html>
