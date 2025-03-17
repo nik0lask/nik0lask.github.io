@@ -37,6 +37,11 @@
         #undoButton { background-color: #e74c3c; }
         #undoButton:hover { background-color: #c0392b; }
         .task-id { font-size: 0.85em; color: #7f8c8d; margin-bottom: 8px; }
+        #saveButton { background-color: #27ae60; }
+        #saveButton:hover { background-color: #219653; }
+        #clearStorageButton { background-color: #e67e22; }
+        #clearStorageButton:hover { background-color: #d35400; }
+        .saved-session-banner { background-color: #e8f4fc; border-left: 4px solid #3498db; padding: 10px; margin-bottom: 15px; display: none; }
         
         @media only screen and (max-width: 600px) {
             .comparison-container {
@@ -56,6 +61,10 @@
 </head>
 <body>
     <h1>Task Orderer</h1>
+    
+    <div class="saved-session-banner" id="savedSessionBanner">
+        <p>Previous session found. <a href="#" id="loadSavedSession">Load saved session</a> or continue with a new session.</p>
+    </div>
     
     <div class="container upload-container">
         <h2>Upload Task List</h2>
@@ -100,12 +109,14 @@
     <div class="center">
         <button id="undoButton" style="display:none;">Undo Comparison</button>
         <button id="skipButton" style="display:none;">Skip Comparison</button>
+        <button id="saveButton" style="display:none;">Save Progress</button>
     </div>
 
     <div class="container" id="resultContainer" style="display:none;">
         <h2>Ordered Task List</h2>
         <button id="exportButton">Export to Excel</button>
         <button id="moreComparisonsButton">Add More Comparisons</button>
+        <button id="clearStorageButton">Clear Saved Data</button>
         <table id="resultTable">
             <thead>
                 <tr>
@@ -153,10 +164,130 @@
             exportButton: document.getElementById('exportButton'),
             skipButton: document.getElementById('skipButton'),
             undoButton: document.getElementById('undoButton'),
+            saveButton: document.getElementById('saveButton'),
             progressBar: document.getElementById('progressBar'),
             status: document.getElementById('status'),
-            moreComparisonsButton: document.getElementById('moreComparisonsButton')
+            moreComparisonsButton: document.getElementById('moreComparisonsButton'),
+            clearStorageButton: document.getElementById('clearStorageButton'),
+            savedSessionBanner: document.getElementById('savedSessionBanner'),
+            loadSavedSession: document.getElementById('loadSavedSession')
         };
+
+        // Check for saved session when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            checkForSavedSession();
+        });
+
+        // Check if there's a saved session in localStorage
+        function checkForSavedSession() {
+            if (localStorage.getItem('taskOrderSessionData')) {
+                elements.savedSessionBanner.style.display = 'block';
+            }
+        }
+
+        // Load saved session from localStorage
+        elements.loadSavedSession.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            try {
+                const savedData = JSON.parse(localStorage.getItem('taskOrderSessionData'));
+                
+                // Restore all saved data
+                tasks = savedData.tasks;
+                taskIds = savedData.taskIds;
+                taskRatings = savedData.taskRatings;
+                taskComparisonCount = savedData.taskComparisonCount;
+                previousRanks = savedData.previousRanks;
+                taskStatus = savedData.taskStatus;
+                comparisonHistory = savedData.comparisonHistory;
+                completedComparisons = savedData.completedComparisons;
+                requiredComparisons = savedData.requiredComparisons;
+                comparisonQueue = savedData.comparisonQueue;
+                kFactor = savedData.kFactor;
+                minComparisonsPerTask = savedData.minComparisonsPerTask;
+                
+                // Update UI to reflect loaded data
+                elements.kFactorSlider.value = kFactor;
+                elements.kFactorValue.textContent = kFactor;
+                elements.minCompsSlider.value = minComparisonsPerTask;
+                elements.minCompsValue.textContent = minComparisonsPerTask;
+                
+                // Hide the banner and upload container
+                elements.savedSessionBanner.style.display = 'none';
+                document.querySelector('.upload-container').style.display = 'none';
+                
+                // Show the results and comparisons
+                elements.resultContainer.style.display = 'block';
+                elements.saveButton.style.display = 'inline-block';
+                
+                // Generate new comparisons if needed and continue
+                if (comparisonQueue.length === 0) {
+                    generateComparisonQueue();
+                }
+                
+                // Update the results table
+                updateResultTable();
+                updateProgressBar();
+                
+                // Start comparisons if there are comparisons left
+                if (comparisonQueue.length > 0) {
+                    showNextComparison();
+                    elements.skipButton.style.display = 'inline-block';
+                    elements.undoButton.style.display = 'inline-block';
+                } else {
+                    elements.status.textContent = 'All necessary comparisons complete!';
+                }
+                
+                // Show success message
+                alert('Session loaded successfully!');
+            } catch (error) {
+                console.error('Error loading saved session:', error);
+                alert('Error loading saved session. The saved data may be corrupted.');
+            }
+        });
+
+        // Save current session to localStorage
+        function saveSessionToLocalStorage() {
+            try {
+                const sessionData = {
+                    tasks,
+                    taskIds,
+                    taskRatings,
+                    taskComparisonCount,
+                    previousRanks,
+                    taskStatus,
+                    comparisonHistory,
+                    completedComparisons,
+                    requiredComparisons,
+                    comparisonQueue,
+                    kFactor,
+                    minComparisonsPerTask
+                };
+                
+                localStorage.setItem('taskOrderSessionData', JSON.stringify(sessionData));
+                return true;
+            } catch (error) {
+                console.error('Error saving session:', error);
+                return false;
+            }
+        }
+
+        // Clear saved data from localStorage
+        elements.clearStorageButton.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all saved data? This cannot be undone.')) {
+                localStorage.removeItem('taskOrderSessionData');
+                location.reload();
+            }
+        });
+
+        // Save button functionality
+        elements.saveButton.addEventListener('click', function() {
+            if (saveSessionToLocalStorage()) {
+                alert('Session saved successfully!');
+            } else {
+                alert('Error saving session. Please try again.');
+            }
+        });
 
         // Event listeners for sliders
         elements.kFactorSlider.addEventListener('input', function() {
@@ -206,6 +337,9 @@
                 
                 requiredComparisons = Math.min(tasks.length * minComparisonsPerTask / 2, tasks.length * (tasks.length - 1) / 2);
                 elements.status.textContent = `Loaded ${tasks.length} tasks. Estimated comparisons needed: ~${Math.ceil(requiredComparisons)}`;
+                
+                // Hide the saved session banner if it was visible
+                elements.savedSessionBanner.style.display = 'none';
             };
             reader.readAsArrayBuffer(file);
         });
@@ -217,6 +351,7 @@
             showNextComparison();
             elements.skipButton.style.display = 'inline-block';
             elements.undoButton.style.display = 'inline-block';
+            elements.saveButton.style.display = 'inline-block';
             elements.resultContainer.style.display = 'block';
             updateResultTable();
         });
@@ -250,7 +385,7 @@
                     
                     for (let i = 0; i < Math.min(3, opponents.length); i++) {
                         const pair = [taskIndex, opponents[i]].sort();
-                        if (!comparisonHistory.some(comp => comp[0] === pair[0] && comp[1] === pair[1])) {
+                        if (!comparisonHistory.some(comp => comp.indexA === pair[0] && comp.indexB === pair[1])) {
                             comparisonQueue.push(pair);
                         }
                     }
@@ -285,18 +420,6 @@
             
             currentPair = comparisonQueue.shift();
             const [indexA, indexB] = currentPair;
-            
-            /* // Check for index changes and add highlight if needed
-            elements.taskA.classList.remove('changed');
-            elements.taskB.classList.remove('changed');
-            
-            if (previousTaskIndices[0] !== null && previousTaskIndices[0] !== indexA) {
-                elements.taskA.classList.add('changed');
-            }
-            
-            if (previousTaskIndices[1] !== null && previousTaskIndices[1] !== indexB) {
-                elements.taskB.classList.add('changed');
-            } */
             
             // Update the task displays
             elements.taskAId.textContent = `ID: ${taskIds[indexA]}`;
@@ -414,6 +537,9 @@
             savePreviousRanks();
             updateResultTable();
             showNextComparison();
+            
+            // Auto-save after each comparison
+            saveSessionToLocalStorage();
         }
 
         // Save current ranks for change tracking
