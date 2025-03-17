@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,42 +8,52 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1200px;
+            max-width: 2400px;
             margin: 0 auto;
             padding: 20px;
         }
+
         .container {
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
+
         .section {
             border: 1px solid #ddd;
             padding: 15px;
             border-radius: 5px;
             background-color: #f9f9f9;
         }
+
         h2 {
             margin-top: 0;
             color: #333;
         }
+
         .input-group {
             margin-bottom: 15px;
         }
+
         label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="text"], input[type="number"], input[type="search"] {
+
+        input[type="text"],
+        input[type="number"],
+        input[type="search"] {
             width: 100%;
-            padding: 8px;
+            padding: 0px;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
+
         .file-input {
             margin-bottom: 10px;
         }
+
         .checkbox-group {
             display: flex;
             flex-wrap: wrap;
@@ -51,16 +62,19 @@
             max-height: 300px;
             overflow-y: auto;
         }
+
         .checkbox-item {
             display: flex;
             align-items: center;
             margin-right: 15px;
         }
+
         .radio-group {
             display: flex;
             gap: 15px;
             margin-top: 5px;
         }
+
         button {
             padding: 10px 15px;
             background-color: #4CAF50;
@@ -70,22 +84,28 @@
             cursor: pointer;
             font-size: 16px;
         }
+
         button:hover {
             background-color: #45a049;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-        th, td {
+
+        th,
+        td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
         }
+
         th {
             background-color: #f2f2f2;
         }
+
         .preference-rating {
             display: grid;
             grid-template-columns: 1fr repeat(4, auto);
@@ -96,47 +116,66 @@
             border: 1px solid #eee;
             border-radius: 4px;
         }
+
         .preference-rating label {
             font-weight: normal;
         }
+
         .preference-rating-header {
-            display: grid;
-            grid-template-columns: 1fr repeat(4, auto);
-            gap: 10px;
+            display: flex;
+            justify-content: space-between;
             font-weight: bold;
             margin-bottom: 10px;
             padding: 5px;
+            font-size: 14px;
         }
+
         .hidden {
             display: none;
         }
+
         .preview-table {
             margin-top: 10px;
             max-height: 200px;
             overflow-y: auto;
         }
+
         .status {
             margin-top: 10px;
             padding: 10px;
             border-radius: 4px;
         }
+
+        .sub-section {
+            display: flex;
+            gap: 40px;
+        }
+
+        .section-column {
+            width: 50%;
+        }
+
         .success {
             background-color: #d4edda;
             color: #155724;
         }
+
         .error {
             background-color: #f8d7da;
             color: #721c24;
         }
+
         .search-container {
             margin-bottom: 10px;
         }
+
         .search-container input {
             width: 100%;
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
+
         .search-results {
             max-height: 300px;
             overflow-y: auto;
@@ -144,7 +183,9 @@
             padding: 10px;
             margin-top: 5px;
         }
-        .preferences-container, .toy-types-container {
+
+        .preferences-container,
+        .toy-types-container {
             border: 1px solid #ddd;
             padding: 10px;
             margin-bottom: 15px;
@@ -152,12 +193,13 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <div class="section">
+        <div id="importTables" class="section">
             <h2>Import Tables</h2>
             <div class="input-group">
-                <label for="preferencesFile">Table 1: Preferences (Excel file)</label>
+                <label for="preferencesFile">Table 1: Kink Preferences (Excel file)</label>
                 <input type="file" id="preferencesFile" class="file-input" accept=".xlsx, .xls">
                 <div id="preferencesPreview" class="preview-table hidden">
                     <h3>Preview:</h3>
@@ -179,85 +221,95 @@
         <div id="taskForm" class="section hidden">
             <h2>Create Task</h2>
             <form id="newTaskForm">
-                <div class="input-group">
-                    <label for="description">Description</label>
-                    <input type="text" id="description" required>
-                </div>
-                <div class="input-group">
-                    <label for="minDuration">Minimum Duration (seconds)</label>
-                    <input type="number" id="minDuration" min="0" required>
-                </div>
-                <div class="input-group">
-                    <label for="maxDuration">Maximum Duration (seconds)</label>
-                    <input type="number" id="maxDuration" min="0" required>
-                </div>
-                <div class="input-group">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="withPartner">
-                        <label for="withPartner">With Partner</label>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="finisher">
-                        <label for="finisher">Finisher</label>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="pnsh">
-                        <label for="pnsh">Pnsh</label>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label>DomSB</label>
-                    <div class="radio-group">
-                        <div class="checkbox-item">
-                            <input type="radio" id="domSB1" name="domSB" value="SBit 1" required>
-                            <label for="domSB1">SBit 1</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="radio" id="domSB2" name="domSB" value="SBit 2">
-                            <label for="domSB2">SBit 2</label>
+                <div class="sub-section">
+                    <div class="section-column">
+                        <div class="input-group">
+                            <label for="description">Description</label>
+                            <textarea type="text" id="description" style="padding: 8px;height: 400px; width: 100%;" required></textarea>
                         </div>
                     </div>
-                </div>
-                <div class="input-group">
-                    <label>SubSB</label>
-                    <div class="radio-group">
-                        <div class="checkbox-item">
-                            <input type="radio" id="subSB1" name="subSB" value="SBit 1" required>
-                            <label for="subSB1">SBit 1</label>
+                    <div class="section-column">
+                        <div class="input-group">
+                            <label for="minDuration">Minimum Duration (seconds)</label>
+                            <input type="number" id="minDuration" style="padding: 8px;" min="0" required>
                         </div>
-                        <div class="checkbox-item">
-                            <input type="radio" id="subSB2" name="subSB" value="SBit 2">
-                            <label for="subSB2">SBit 2</label>
+                        <div class="input-group">
+                            <label for="maxDuration">Maximum Duration (seconds)</label>
+                            <input type="number" id="maxDuration" style="padding: 8px;" min="0" required>
+                        </div>
+                        <div class="input-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="withPartner">
+                                <label for="withPartner">With Partner</label>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="finisher">
+                                <label for="finisher">Finisher</label>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="punishment">
+                                <label for="punishment">Punishment</label>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>domSexyBits</label>
+                            <div class="radio-group">
+                                <div class="checkbox-item">
+                                    <input type="radio" id="domSexyBits1" name="domSexyBits" value="PENIS" required>
+                                    <label for="domSexyBits1">PENIS</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="radio" id="domSexyBits2" name="domSexyBits" value="VAGINA">
+                                    <label for="domSexyBits2">VAGINA</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>subSexyBits</label>
+                            <div class="radio-group">
+                                <div class="checkbox-item">
+                                    <input type="radio" id="subSexyBits1" name="subSexyBits" value="PENIS" required>
+                                    <label for="subSexyBits1">PENIS</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="radio" id="subSexyBits2" name="subSexyBits" value="VAGINA">
+                                    <label for="subSexyBits2">VAGINA</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="input-group toy-types-container">
-                    <label>Toy Types</label>
-                    <div class="search-container">
-                        <input type="search" id="toyTypesSearch" placeholder="Search toy types...">
+                <div class="sub-section">
+                    <div class="section-column">
+                        <div class="input-group toy-types-container">
+                            <label>Toy Types</label>
+                            <div class="search-container">
+                                <input type="search" id="toyTypesSearch" placeholder="Search toy types...">
+                            </div>
+                            <div id="toyTypesCheckboxes" class="checkbox-group">
+                                <!-- Will be populated dynamically -->
+                            </div>
+                        </div>
                     </div>
-                    <div id="toyTypesCheckboxes" class="checkbox-group">
-                        <!-- Will be populated dynamically -->
-                    </div>
-                </div>
-                <div class="input-group preferences-container">
-                    <label>Preferences Rating</label>
-                    <div class="search-container">
-                        <input type="search" id="preferencesSearch" placeholder="Search preferences...">
-                    </div>
-                    <div class="preference-rating-header">
-                        <div>Preference</div>
-                        <div>Dom Giving (1-5)</div>
-                        <div>Dom Receiving (1-5)</div>
-                        <div>Sub Giving (1-5)</div>
-                        <div>Sub Receiving (1-5)</div>
-                    </div>
-                    <div id="preferencesRating" class="search-results">
-                        <!-- Will be populated dynamically -->
+                    <div class="section-column">
+                        <div class="input-group preferences-container">
+                            <label>Kink Preferences</label>
+                            <div class="search-container">
+                                <input type="search" id="preferencesSearch" placeholder="Search preferences...">
+                            </div>
+                            <div class="preference-rating-header">
+                                <div>Preference</div>
+                                <div>Dom Giving | Dom Receiving | Sub Giving | Sub Receiving</div>
+                            </div>
+                            <div id="preferencesRating" class="search-results">
+                                <!-- Will be populated dynamically -->
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <button type="submit">Save Task</button>
@@ -272,17 +324,17 @@
             <table id="tasksTable">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Description</th>
-                        <th>Min Duration</th>
-                        <th>Max Duration</th>
-                        <th>With Partner</th>
+                        <th>id</th>
+                        <th>description</th>
+                        <th>minDurationInSeconds</th>
+                        <th>maxDurationInSeconds</th>
+                        <th>withPartner</th>
                         <th>Finisher</th>
-                        <th>Pnsh</th>
-                        <th>DomSB</th>
-                        <th>SubSB</th>
-                        <th>Toy Types</th>
-                        <th>Preferences</th>
+                        <th>Punishment</th>
+                        <th>domSexyBits</th>
+                        <th>subSexyBits</th>
+                        <th>toyTypes</th>
+                        <th>kinkPreferences</th>
                     </tr>
                 </thead>
                 <tbody id="taskList">
@@ -294,11 +346,11 @@
 
     <!-- Include SheetJS (xlsx) library for Excel file parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
+
     <script>
         // Generate UUID function
         function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                 var r = Math.random() * 16 | 0,
                     v = c == 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
@@ -319,6 +371,7 @@
         const toyTypesTable = document.getElementById('toyTypesTable');
         const importStatus = document.getElementById('importStatus');
         const loadTablesBtn = document.getElementById('loadTables');
+        const importTables = document.getElementById('importTables')
         const taskForm = document.getElementById('taskForm');
         const tasksSection = document.getElementById('tasksSection');
         const newTaskForm = document.getElementById('newTaskForm');
@@ -332,7 +385,7 @@
         // Function to read Excel file
         function readExcelFile(file, callback) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
@@ -346,16 +399,16 @@
         // Function to display table preview
         function displayTablePreview(tableElement, data, previewElement) {
             tableElement.innerHTML = '';
-            
+
             // Create table header
             const headerRow = document.createElement('tr');
             for (let i = 0; i < data[0].length; i++) {
                 const th = document.createElement('th');
-                th.textContent = data[0][i] || `Column ${i+1}`;
+                th.textContent = data[0][i] || `Column ${i + 1}`;
                 headerRow.appendChild(th);
             }
             tableElement.appendChild(headerRow);
-            
+
             // Create table rows
             for (let i = 1; i < Math.min(data.length, 6); i++) {
                 const row = document.createElement('tr');
@@ -366,14 +419,14 @@
                 }
                 tableElement.appendChild(row);
             }
-            
+
             previewElement.classList.remove('hidden');
         }
 
         // Event listener for preferences file input
-        preferencesFileInput.addEventListener('change', function(e) {
+        preferencesFileInput.addEventListener('change', function (e) {
             if (this.files.length > 0) {
-                readExcelFile(this.files[0], function(data) {
+                readExcelFile(this.files[0], function (data) {
                     // Extract the first column (preferences)
                     preferences = data.slice(1).map(row => row[0]).filter(item => item);
                     displayTablePreview(preferencesTable, data, preferencesPreview);
@@ -382,9 +435,9 @@
         });
 
         // Event listener for toy types file input
-        toyTypesFileInput.addEventListener('change', function(e) {
+        toyTypesFileInput.addEventListener('change', function (e) {
             if (this.files.length > 0) {
-                readExcelFile(this.files[0], function(data) {
+                readExcelFile(this.files[0], function (data) {
                     // Extract the first column (toy types)
                     toyTypes = data.slice(1).map(row => row[0]).filter(item => item);
                     displayTablePreview(toyTypesTable, data, toyTypesPreview);
@@ -429,13 +482,13 @@
 
             // Add event listeners to preference checkboxes to enable/disable ratings
             document.querySelectorAll('.pref-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
+                checkbox.addEventListener('change', function () {
                     const prefName = this.value;
                     const domGiving = document.getElementById(`dom-giving-${prefName}`);
                     const domReceiving = document.getElementById(`dom-receiving-${prefName}`);
                     const subGiving = document.getElementById(`sub-giving-${prefName}`);
                     const subReceiving = document.getElementById(`sub-receiving-${prefName}`);
-                    
+
                     domGiving.disabled = !this.checked;
                     domReceiving.disabled = !this.checked;
                     subGiving.disabled = !this.checked;
@@ -445,10 +498,10 @@
         }
 
         // Filter toy types based on search
-        toyTypesSearch.addEventListener('input', function() {
+        toyTypesSearch.addEventListener('input', function () {
             const searchValue = this.value.toLowerCase();
             const checkboxItems = toyTypesCheckboxes.querySelectorAll('.checkbox-item');
-            
+
             checkboxItems.forEach(item => {
                 const value = item.dataset.value;
                 if (value.includes(searchValue)) {
@@ -460,10 +513,10 @@
         });
 
         // Filter preferences based on search
-        preferencesSearch.addEventListener('input', function() {
+        preferencesSearch.addEventListener('input', function () {
             const searchValue = this.value.toLowerCase();
             const preferenceItems = preferencesRating.querySelectorAll('.preference-rating');
-            
+
             preferenceItems.forEach(item => {
                 const value = item.dataset.value;
                 if (value.includes(searchValue)) {
@@ -475,7 +528,7 @@
         });
 
         // Load tables and initialize the form
-        loadTablesBtn.addEventListener('click', function() {
+        loadTablesBtn.addEventListener('click', function () {
             if (preferences.length === 0 || toyTypes.length === 0) {
                 importStatus.innerHTML = '<div class="status error">Please upload both Excel files and ensure they contain data.</div>';
                 return;
@@ -490,31 +543,32 @@
             // Show form and tasks sections
             taskForm.classList.remove('hidden');
             tasksSection.classList.remove('hidden');
+            importTables.classList.add('hidden');
         });
 
         // Handle form submission
-        newTaskForm.addEventListener('submit', function(e) {
+        newTaskForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            
+
             // Generate UUID
             const id = generateUUID();
-            
+
             // Get form values
             const description = document.getElementById('description').value;
             const minDuration = document.getElementById('minDuration').value;
             const maxDuration = document.getElementById('maxDuration').value;
             const withPartner = document.getElementById('withPartner').checked;
             const finisher = document.getElementById('finisher').checked;
-            const pnsh = document.getElementById('pnsh').checked;
-            
+            const punishment = document.getElementById('punishment').checked;
+
             // Get selected radio button values
-            const domSB = document.querySelector('input[name="domSB"]:checked').value;
-            const subSB = document.querySelector('input[name="subSB"]:checked').value;
-            
+            const domSexyBits = document.querySelector('input[name="domSexyBits"]:checked').value;
+            const subSexyBits = document.querySelector('input[name="subSexyBits"]:checked').value;
+
             // Get selected toy types
             const selectedToyTypes = Array.from(document.querySelectorAll('input[name="toyTypes"]:checked'))
                 .map(input => input.value);
-            
+
             // Get preferences ratings
             const selectedPreferences = [];
             document.querySelectorAll('.pref-checkbox:checked').forEach(checkbox => {
@@ -523,10 +577,10 @@
                 const domReceiving = document.getElementById(`dom-receiving-${prefName}`).value;
                 const subGiving = document.getElementById(`sub-giving-${prefName}`).value;
                 const subReceiving = document.getElementById(`sub-receiving-${prefName}`).value;
-                
+
                 selectedPreferences.push(`${prefName}:${domGiving}:${domReceiving}:${subGiving}:${subReceiving}`);
             });
-            
+
             // Create task object
             const task = {
                 id,
@@ -535,32 +589,32 @@
                 maxDurationInSeconds: maxDuration,
                 withPartner,
                 finisher,
-                pnsh,
-                domSB,
-                subSB,
+                punishment,
+                domSexyBits,
+                subSexyBits,
                 toyTypes: selectedToyTypes.join('|'),
-                kpreferences: selectedPreferences.join('|')
+                kinkPreferences: selectedPreferences.join('|')
             };
-            
+
             // Add task to array
             tasks.push(task);
-            
+
             // Add task to table
             addTaskToTable(task);
-            
+
             // Reset form
             newTaskForm.reset();
-            
+
             // Clear search fields and reset displayed items
             toyTypesSearch.value = '';
             preferencesSearch.value = '';
-            
+
             // Reset displayed items after search is cleared
             const toyCheckboxItems = toyTypesCheckboxes.querySelectorAll('.checkbox-item');
             toyCheckboxItems.forEach(item => {
                 item.style.display = '';
             });
-            
+
             const preferenceItems = preferencesRating.querySelectorAll('.preference-rating');
             preferenceItems.forEach(item => {
                 item.style.display = '';
@@ -577,29 +631,29 @@
                 <td>${task.maxDurationInSeconds}</td>
                 <td>${task.withPartner ? 'TRUE' : 'FALSE'}</td>
                 <td>${task.finisher ? 'TRUE' : 'FALSE'}</td>
-                <td>${task.pnsh ? 'TRUE' : 'FALSE'}</td>
-                <td>${task.domSB}</td>
-                <td>${task.subSB}</td>
+                <td>${task.punishment ? 'TRUE' : 'FALSE'}</td>
+                <td>${task.domSexyBits}</td>
+                <td>${task.subSexyBits}</td>
                 <td>${task.toyTypes}</td>
-                <td>${task.kpreferences}</td>
+                <td>${task.kinkPreferences}</td>
             `;
             taskList.appendChild(row);
         }
 
         // Export tasks to CSV
-        exportCSVBtn.addEventListener('click', function() {
+        exportCSVBtn.addEventListener('click', function () {
             if (tasks.length === 0) {
                 alert('No tasks to export');
                 return;
             }
-            
+
             // Create CSV header
-            const headers = ['id', 'description', 'minDurationInSeconds', 'maxDurationInSeconds', 
-                            'withPartner', 'finisher', 'pnsh', 'domSB', 'subSB', 'toyTypes', 'kpreferences'];
-            
+            const headers = ['id', 'description', 'minDurationInSeconds', 'maxDurationInSeconds',
+                'withPartner', 'finisher', 'punishment', 'domSexyBits', 'subSexyBits', 'toyTypes', 'kinkPreferences'];
+
             // Create CSV content
             let csvContent = headers.join(',') + '\n';
-            
+
             // Add each task as a row
             tasks.forEach(task => {
                 const row = [
@@ -609,15 +663,15 @@
                     task.maxDurationInSeconds,
                     task.withPartner ? 'TRUE' : 'FALSE',
                     task.finisher ? 'TRUE' : 'FALSE',
-                    task.pnsh ? 'TRUE' : 'FALSE',
-                    `"${task.domSB}"`,
-                    `"${task.subSB}"`,
+                    task.punishment ? 'TRUE' : 'FALSE',
+                    `"${task.domSexyBits}"`,
+                    `"${task.subSexyBits}"`,
                     `"${task.toyTypes}"`,
-                    `"${task.kpreferences}"`
+                    `"${task.kinkPreferences}"`
                 ];
                 csvContent += row.join(',') + '\n';
             });
-            
+
             // Create and download the CSV file
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -631,4 +685,5 @@
         });
     </script>
 </body>
+
 </html>
