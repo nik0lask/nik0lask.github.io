@@ -562,8 +562,8 @@
             const punishment = document.getElementById('punishment').checked;
 
             // Get selected radio button values
-            const domSexyBits = document.querySelector('input[name="domSexyBits"]:checked').value;
-            const subSexyBits = document.querySelector('input[name="subSexyBits"]:checked').value;
+            const domSexyBits = (document.querySelector('input[name="domSexyBits"]:checked') || {}).value || "";
+            const subSexyBits = (document.querySelector('input[name="subSexyBits"]:checked') || {}).value || "";
 
             // Get selected toy types
             const selectedToyTypes = Array.from(document.querySelectorAll('input[name="toyTypes"]:checked'))
