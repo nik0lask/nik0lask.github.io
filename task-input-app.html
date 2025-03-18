@@ -472,10 +472,10 @@
                         <input type="checkbox" id="pref-${preference}" class="pref-checkbox" value="${preference}">
                         <label for="pref-${preference}">${preference}</label>
                     </div>
-                    <input type="number" id="dom-giving-${preference}" min="1" max="5" value="1" disabled>
-                    <input type="number" id="dom-receiving-${preference}" min="1" max="5" value="1" disabled>
-                    <input type="number" id="sub-giving-${preference}" min="1" max="5" value="1" disabled>
-                    <input type="number" id="sub-receiving-${preference}" min="1" max="5" value="1" disabled>
+                    <input type="number" id="dom-giving-${preference}" min="0" max="4" value="0" disabled>
+                    <input type="number" id="dom-receiving-${preference}" min="0" max="4" value="0" disabled>
+                    <input type="number" id="sub-giving-${preference}" min="0" max="4" value="0" disabled>
+                    <input type="number" id="sub-receiving-${preference}" min="0" max="4" value="0" disabled>
                 `;
                 preferencesRating.appendChild(div);
             });
