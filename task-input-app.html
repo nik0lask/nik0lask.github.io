@@ -229,7 +229,8 @@
                     <div class="section-column">
                         <div class="input-group">
                             <label for="description">Description</label>
-                            <textarea type="text" id="description" style="padding: 8px;height: 400px; width: 100%;" required></textarea>
+                            <textarea type="text" id="description" style="padding: 8px;height: 400px; width: 100%;"
+                                required></textarea>
                         </div>
                     </div>
                     <div class="section-column">
@@ -551,11 +552,41 @@
         });
 
         // Handle form submission
+        // Modify the addTaskToTable function to include action buttons
+        function addTaskToTable(task) {
+            // Create the row element first without setting innerHTML
+            const row = document.createElement('tr');
+
+            // Create and append cells individually
+            const createCell = (content) => {
+                const cell = document.createElement('td');
+                cell.textContent = content;
+                return cell;
+            };
+
+            // Add each cell with proper content
+            row.appendChild(createCell(task.id));
+            row.appendChild(createCell(task.description));
+            row.appendChild(createCell(task.minDurationInSeconds));
+            row.appendChild(createCell(task.maxDurationInSeconds));
+            row.appendChild(createCell(task.withPartner ? 'TRUE' : 'FALSE'));
+            row.appendChild(createCell(task.finisher ? 'TRUE' : 'FALSE'));
+            row.appendChild(createCell(task.punishment ? 'TRUE' : 'FALSE'));
+            row.appendChild(createCell(task.domSexyBits));
+            row.appendChild(createCell(task.subSexyBits));
+            row.appendChild(createCell(task.toyTypes));
+            row.appendChild(createCell(task.kinkPreferences));
+
+            // Now append the completed row to the table
+            taskList.appendChild(row);
+
+            // Add action buttons to the row
+            addActionButtons(row, tasks.length - 1);
+        }
+
+        // Modify the form submission handler
         newTaskForm.addEventListener('submit', function (e) {
             e.preventDefault();
-
-            // Generate UUID
-            const id = generateUUID();
 
             // Get form values
             const description = document.getElementById('description').value;
@@ -585,29 +616,74 @@
                 selectedPreferences.push(`${prefName}:${domGiving}:${domReceiving}:${subGiving}:${subReceiving}`);
             });
 
-            // Create task object
-            const task = {
-                id,
-                description,
-                minDurationInSeconds: minDuration,
-                maxDurationInSeconds: maxDuration,
-                withPartner,
-                finisher,
-                punishment,
-                domSexyBits,
-                subSexyBits,
-                toyTypes: selectedToyTypes.join('|'),
-                kinkPreferences: selectedPreferences.join('|')
-            };
+            // Check if we're editing an existing task or creating a new one
+            if (newTaskForm.dataset.editIndex !== undefined) {
+                // Editing existing task
+                const index = newTaskForm.dataset.editIndex;
+                const id = newTaskForm.dataset.editId;
 
-            // Add task to array
-            tasks.push(task);
+                // Update task object
+                const updatedTask = {
+                    id,
+                    description,
+                    minDurationInSeconds: minDuration,
+                    maxDurationInSeconds: maxDuration,
+                    withPartner,
+                    finisher,
+                    punishment,
+                    domSexyBits,
+                    subSexyBits,
+                    toyTypes: selectedToyTypes.join('|'),
+                    kinkPreferences: selectedPreferences.join('|')
+                };
 
-            // Add task to table
-            addTaskToTable(task);
+                // Update tasks array
+                tasks[index] = updatedTask;
 
-            // Reset form
-            newTaskForm.reset();
+                // Update table row
+                const row = taskList.rows[index];
+                row.cells[1].textContent = description;
+                row.cells[2].textContent = minDuration;
+                row.cells[3].textContent = maxDuration;
+                row.cells[4].textContent = withPartner ? 'TRUE' : 'FALSE';
+                row.cells[5].textContent = finisher ? 'TRUE' : 'FALSE';
+                row.cells[6].textContent = punishment ? 'TRUE' : 'FALSE';
+                row.cells[7].textContent = domSexyBits;
+                row.cells[8].textContent = subSexyBits;
+                row.cells[9].textContent = selectedToyTypes.join('|');
+                row.cells[10].textContent = selectedPreferences.join('|');
+
+                // Reset edit mode
+                resetEditMode();
+            } else {
+                // Creating new task
+                // Generate UUID
+                const id = generateUUID();
+
+                // Create task object
+                const task = {
+                    id,
+                    description,
+                    minDurationInSeconds: minDuration,
+                    maxDurationInSeconds: maxDuration,
+                    withPartner,
+                    finisher,
+                    punishment,
+                    domSexyBits,
+                    subSexyBits,
+                    toyTypes: selectedToyTypes.join('|'),
+                    kinkPreferences: selectedPreferences.join('|')
+                };
+
+                // Add task to array
+                tasks.push(task);
+
+                // Add task to table
+                addTaskToTable(task);
+
+                // Reset form
+                newTaskForm.reset();
+            }
 
             // Clear search fields and reset displayed items
             toyTypesSearch.value = '';
@@ -625,24 +701,27 @@
             });
         });
 
-        // Add task to the table
-        function addTaskToTable(task) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${task.id}</td>
-                <td>${task.description}</td>
-                <td>${task.minDurationInSeconds}</td>
-                <td>${task.maxDurationInSeconds}</td>
-                <td>${task.withPartner ? 'TRUE' : 'FALSE'}</td>
-                <td>${task.finisher ? 'TRUE' : 'FALSE'}</td>
-                <td>${task.punishment ? 'TRUE' : 'FALSE'}</td>
-                <td>${task.domSexyBits}</td>
-                <td>${task.subSexyBits}</td>
-                <td>${task.toyTypes}</td>
-                <td>${task.kinkPreferences}</td>
-            `;
-            taskList.appendChild(row);
-        }
+        // Call makeTableEditable when tables are loaded
+        loadTablesBtn.addEventListener('click', function () {
+            if (preferences.length === 0 || toyTypes.length === 0) {
+                importStatus.innerHTML = '<div class="status error">Please upload both Excel files and ensure they contain data.</div>';
+                return;
+            }
+
+            importStatus.innerHTML = '<div class="status success">Tables loaded successfully!</div>';
+
+            // Populate toy types checkboxes and preferences rating
+            populateToyTypes();
+            populatePreferences();
+
+            // Show form and tasks sections
+            taskForm.classList.remove('hidden');
+            tasksSection.classList.remove('hidden');
+            importTables.classList.add('hidden');
+
+            // Make the table editable
+            makeTableEditable();
+        });
 
         // Export tasks to CSV
         exportCSVBtn.addEventListener('click', function () {
@@ -687,6 +766,168 @@
             link.click();
             document.body.removeChild(link);
         });
+
+        // Function to make the table editable
+        function makeTableEditable() {
+            // Add edit and delete buttons to the table header
+            const headerRow = document.querySelector('#tasksTable thead tr');
+            const actionsHeader = document.createElement('th');
+            actionsHeader.textContent = 'Actions';
+            headerRow.appendChild(actionsHeader);
+
+            // Add edit and delete buttons to existing rows
+            document.querySelectorAll('#taskList tr').forEach((row, index) => {
+                addActionButtons(row, index);
+            });
+        }
+
+        // Function to add action buttons to a row
+        function addActionButtons(row, taskIndex) {
+            const actionsCell = document.createElement('td');
+            actionsCell.innerHTML = `
+    <button class="edit-btn" data-index="${taskIndex}" style="background-color: #2196F3; margin-right: 5px;">Edit</button>
+    <button class="delete-btn" data-index="${taskIndex}" style="background-color: #f44336;">Delete</button>
+  `;
+            row.appendChild(actionsCell);
+
+            // Add event listeners to buttons
+            actionsCell.querySelector('.edit-btn').addEventListener('click', handleEdit);
+            actionsCell.querySelector('.delete-btn').addEventListener('click', handleDelete);
+        }
+
+        // Function to handle edit button click
+        function handleEdit(e) {
+            const index = e.target.dataset.index;
+            const task = tasks[index];
+
+            // Fill the form with task data
+            document.getElementById('description').value = task.description;
+            document.getElementById('minDuration').value = task.minDurationInSeconds;
+            document.getElementById('maxDuration').value = task.maxDurationInSeconds;
+            document.getElementById('withPartner').checked = task.withPartner;
+            document.getElementById('finisher').checked = task.finisher;
+            document.getElementById('punishment').checked = task.punishment;
+
+            // Set radio buttons
+            if (task.domSexyBits === 'PENIS') {
+                document.getElementById('domSexyBits1').checked = true;
+            } else if (task.domSexyBits === 'VAGINA') {
+                document.getElementById('domSexyBits2').checked = true;
+            }
+
+            if (task.subSexyBits === 'PENIS') {
+                document.getElementById('subSexyBits1').checked = true;
+            } else if (task.subSexyBits === 'VAGINA') {
+                document.getElementById('subSexyBits2').checked = true;
+            }
+
+            // Set toy types
+            const selectedToyTypes = task.toyTypes.split('|');
+            document.querySelectorAll('input[name="toyTypes"]').forEach(checkbox => {
+                checkbox.checked = selectedToyTypes.includes(checkbox.value);
+            });
+
+            // Set preferences
+            const selectedPreferences = task.kinkPreferences.split('|');
+            document.querySelectorAll('.pref-checkbox').forEach(checkbox => {
+                const prefName = checkbox.value;
+                const prefData = selectedPreferences.find(pref => pref.startsWith(prefName + ':'));
+
+                if (prefData) {
+                    checkbox.checked = true;
+                    const [, domGiving, domReceiving, subGiving, subReceiving] = prefData.split(':');
+
+                    document.getElementById(`dom-giving-${prefName}`).disabled = false;
+                    document.getElementById(`dom-receiving-${prefName}`).disabled = false;
+                    document.getElementById(`sub-giving-${prefName}`).disabled = false;
+                    document.getElementById(`sub-receiving-${prefName}`).disabled = false;
+
+                    document.getElementById(`dom-giving-${prefName}`).value = domGiving;
+                    document.getElementById(`dom-receiving-${prefName}`).value = domReceiving;
+                    document.getElementById(`sub-giving-${prefName}`).value = subGiving;
+                    document.getElementById(`sub-receiving-${prefName}`).value = subReceiving;
+                } else {
+                    checkbox.checked = false;
+                    document.getElementById(`dom-giving-${prefName}`).disabled = true;
+                    document.getElementById(`dom-receiving-${prefName}`).disabled = true;
+                    document.getElementById(`sub-giving-${prefName}`).disabled = true;
+                    document.getElementById(`sub-receiving-${prefName}`).disabled = true;
+                }
+            });
+
+            // Add a data attribute to the form to track which task is being edited
+            newTaskForm.dataset.editIndex = index;
+            newTaskForm.dataset.editId = task.id;
+
+            // Change the submit button text
+            const submitBtn = newTaskForm.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Update Task';
+
+            // Add a cancel button
+            if (!document.getElementById('cancelEditBtn')) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.id = 'cancelEditBtn';
+                cancelBtn.type = 'button';
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.style.backgroundColor = '#f44336';
+                cancelBtn.style.marginLeft = '10px';
+                submitBtn.parentNode.appendChild(cancelBtn);
+
+                cancelBtn.addEventListener('click', function () {
+                    resetEditMode();
+                });
+            }
+
+            // Scroll to the form
+            taskForm.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Function to handle delete button click
+        function handleDelete(e) {
+            if (confirm('Are you sure you want to delete this task?')) {
+                const index = e.target.dataset.index;
+
+                // Remove task from array
+                tasks.splice(index, 1);
+
+                // Remove row from table
+                e.target.closest('tr').remove();
+
+                // Reset edit mode in case the deleted task was being edited
+                resetEditMode();
+
+                // Update all data-index attributes
+                document.querySelectorAll('.edit-btn, .delete-btn').forEach((btn, i) => {
+                    btn.dataset.index = i;
+                });
+            }
+        }
+
+        // Function to reset edit mode
+        function resetEditMode() {
+            newTaskForm.reset();
+            delete newTaskForm.dataset.editIndex;
+            delete newTaskForm.dataset.editId;
+
+            // Reset ratings
+            document.querySelectorAll('.pref-checkbox').forEach(checkbox => {
+                const prefName = checkbox.value;
+                document.getElementById(`dom-giving-${prefName}`).disabled = true;
+                document.getElementById(`dom-receiving-${prefName}`).disabled = true;
+                document.getElementById(`sub-giving-${prefName}`).disabled = true;
+                document.getElementById(`sub-receiving-${prefName}`).disabled = true;
+            });
+
+            // Change the submit button text back
+            const submitBtn = newTaskForm.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Save Task';
+
+            // Remove the cancel button
+            const cancelBtn = document.getElementById('cancelEditBtn');
+            if (cancelBtn) {
+                cancelBtn.remove();
+            }
+        }
     </script>
 </body>
 
