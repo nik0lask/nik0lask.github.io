@@ -1,655 +1,729 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Task Orderer App</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>Task Comparison Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f5f7fa; color: #333; }
-        h1, h2 { color: #2c3e50; text-align: center; }
-        .container { background-color: white; border-radius: 8px; padding: 20px; margin: 15px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .upload-container { border: 2px dashed #3498db; text-align: center; }
-        button { background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; transition: background-color 0.3s; }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        .comparison-container { display: none; justify-content: space-between; gap: 8px; margin: 20px 0; }
-        .task-card { background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; width: 45%; cursor: pointer; transition: transform 0.2s; }
-        .task-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        .moved-up { background-color: #d4efdf !important; }
-        .moved-down { background-color: #f9e7e7 !important; }
-        .progress-bar-container { width: 100%; background-color: #e0e0e0; border-radius: 4px; margin: 10px 0; height: 8px; }
-        .progress-bar { height: 100%; border-radius: 4px; background-color: #3498db; width: 0%; transition: width 0.5s; }
-        .status { text-align: center; margin: 10px 0; font-style: italic; color: #7f8c8d; }
-        .center { text-align: center; }
-        .slider-container { margin: 10px 0; }
-        .slider-container label { display: block; margin-bottom: 5px; }
-        .position-change { margin-left: 5px; font-weight: bold; }
-        .up { color: #27ae60; }
-        .down { color: #e74c3c; }
-        #resultContainer {overflow: scroll;}
-        /* New styles */
-        .task-card.changed { animation: pulse 1.5s; }
-        #undoButton { background-color: #e74c3c; }
-        #undoButton:hover { background-color: #c0392b; }
-        .task-id { font-size: 0.85em; color: #7f8c8d; margin-bottom: 8px; }
-        #saveButton { background-color: #27ae60; }
-        #saveButton:hover { background-color: #219653; }
-        #clearStorageButton { background-color: #e67e22; }
-        #clearStorageButton:hover { background-color: #d35400; }
-        .saved-session-banner { background-color: #e8f4fc; border-left: 4px solid #3498db; padding: 10px; margin-bottom: 15px; display: none; }
-        
-        @media only screen and (max-width: 600px) {
-            .comparison-container {
-                flex-direction: column;
-            }
-            .task-card {
-                width: 90%;
-            }
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --background-light: #f3f4f6;
+            --text-color: #1f2937;
+            --border-color: #e5e7eb;
         }
 
-        @keyframes pulse {
-            0% { background-color: white; }
-            50% { background-color: #ffe6cc; }
-            100% { background-color: white; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-light);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+
+        .app-title {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #059669;
+        }
+
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .file-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            border-color: var(--primary-color);
+        }
+
+        .file-upload input {
+            margin-top: 1rem;
+        }
+
+        .comparison-area {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .task-card {
+            flex: 1;
+            background-color: var(--background-light);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .task-card:hover {
+            border-color: var(--primary-color);
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        .progress-item {
+            background-color: var(--background-light);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+        }
+
+        .scrollable-table {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        th {
+            background-color: var(--background-light);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        #tasksPreview,
+        #exportArea {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .comparison-area {
+                display: flex;
+                flex-direction: column;
+            }
         }
     </style>
 </head>
+
 <body>
-    <h1>Task Orderer</h1>
-    
-    <div class="saved-session-banner" id="savedSessionBanner">
-        <p>Previous session found. <a href="#" id="loadSavedSession">Load saved session</a> or continue with a new session.</p>
-    </div>
-    
-    <div class="container upload-container">
-        <h2>Upload Task List</h2>
-        <p>Upload an Excel file with task IDs in the first column and descriptions in the second column</p>
-        <input type="file" id="fileUpload" accept=".xlsx, .xls">
-        <button id="loadButton">Load Tasks</button>
-    </div>
+    <div class="container">
+        <h1 class="app-title">Task Comparison Dashboard</h1>
 
-    <div class="container" id="settingsContainer" style="display:none;">
-        <h2>ELO Settings</h2>
-        <div class="slider-container">
-            <label>K-factor: <span id="kFactorValue">32</span></label>
-            <input type="range" id="kFactorSlider" min="8" max="64" value="32" step="4">
+        <div class="control-buttons">
+            <button class="btn btn-danger" onclick="resetRatings()">
+                Reset Ratings
+            </button>
+            <button class="btn btn-danger" onclick="clearLocalStorage()">
+                Clear Storage
+            </button>
         </div>
-        <div class="slider-container">
-            <label>Min. Comparisons per Task: <span id="minCompsValue">3</span></label>
-            <input type="range" id="minCompsSlider" min="1" max="10" value="3" step="1">
+
+        <div class="file-upload">
+            <h3>Upload Tasks CSV</h3>
+            <input type="file" id="tasksFile" accept=".csv">
         </div>
-        <button id="startButton">Start Comparisons</button>
-    </div>
 
-    <div class="status" id="status"></div>
-    <div class="progress-bar-container">
-        <div class="progress-bar" id="progressBar"></div>
-    </div>
-
-    <div class="comparison-container" id="comparisonContainer">
-        <div class="task-card" id="taskA">
-            <div class="task-id" id="taskAId"></div>
-            <h3>Task A</h3>
-            <p id="taskADescription"></p>
-            <p id="taskARating" style="font-size: 0.9em; color: #7f8c8d;"></p>
+        <div class="file-upload">
+            <h3>Optional: Upload Existing Ratings CSV</h3>
+            <input type="file" id="ratingsFile" accept=".csv">
         </div>
-        <div class="task-card" id="taskB">
-            <div class="task-id" id="taskBId"></div>
-            <h3>Task B</h3>
-            <p id="taskBDescription"></p>
-            <p id="taskBRating" style="font-size: 0.9em; color: #7f8c8d;"></p>
+
+        <div id="comparisonContainer" style="display:none;">
+            <div class="progress">
+                <div class="progress-item">
+                    Comparisons Completed: <span id="comparisonCount">0</span>
+                </div>
+                <div class="progress-item">
+                    Remaining Tasks: <span id="remainingTasks">0</span>
+                </div>
+            </div>
+
+            <div class="comparison-area">
+                <div id="task1" class="task-card" onclick="selectTask(1)"></div>
+                <div id="task2" class="task-card" onclick="selectTask(2)"></div>
+            </div>
         </div>
-    </div>
 
-    <div class="center">
-        <button id="undoButton" style="display:none;">Undo Comparison</button>
-        <button id="skipButton" style="display:none;">Skip Comparison</button>
-        <button id="saveButton" style="display:none;">Save Progress</button>
-    </div>
+        <div class="control-buttons">
+            <button class="btn btn-primary" onclick="undoLastComparison()">
+                Undo Comparison
+            </button>
+            <button class="btn btn-primary" onclick="saveProgress()">
+                Save Progress
+            </button>
+        </div>
 
-    <div class="container" id="resultContainer" style="display:none;">
-        <h2>Ordered Task List</h2>
-        <button id="exportButton">Export to Excel</button>
-        <button id="moreComparisonsButton">Add More Comparisons</button>
-        <button id="clearStorageButton">Clear Saved Data</button>
-        <table id="resultTable">
-            <thead>
-                <tr>
-                    <th>Rank</th>
-                    <th>Task ID</th>
-                    <th>Task Description</th>
-                    <th>ELO</th>
-                    <th>Comparisons</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="resultBody"></tbody>
-        </table>
+        <div id="tasksPreview" style="display:none;">
+            <h3>Tasks Preview</h3>
+            <div class="scrollable-table">
+                <table id="tasksPreviewTable">
+                    <thead>
+                        <tr>
+                            <th>Task ID</th>
+                            <th>Description</th>
+                            <th>Min Duration</th>
+                            <th>Max Duration</th>
+                            <th>With Partner</th>
+                            <th>Finisher</th>
+                            <th>Punishment</th>
+                            <th>Dom Sexy Bits</th>
+                            <th>Sub Sexy Bits</th>
+                            <th>Toy Types</th>
+                            <th>KNK Preferences</th>
+                            <th>ELO Rating</th>
+                            <th>Comparisons</th>
+                            <th>Rank</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasksPreviewBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="control-buttons">
+            <button class="btn btn-primary" onclick="exportRankedTasks()">
+                Export Ranked Tasks
+            </button>
+        </div>
+
+        <div id="exportArea" style="display:none;">
+            <div class="scrollable-table">
+                <table id="rankedTasksTable"></table>
+            </div>
+        </div>
+
     </div>
 
     <script>
         // Global variables
-        let tasks = [], taskIds = [], currentPair = [], taskRatings = {}, taskComparisonCount = {}, 
-            previousRanks = {}, taskStatus = {}, comparisonHistory = [], 
-            completedComparisons = 0, requiredComparisons = 0, comparisonQueue = [],
-            kFactor = 32, minComparisonsPerTask = 3, lastComparison = null,
-            previousTaskIndices = [null, null]; // Store indices instead of IDs
+        let tasks = [];
+        let comparedPairs = [];
+        let currentPair = null;
+        let taskRatings = {};
+        const K_FACTOR = 32;
 
-        // DOM elements
-        const elements = {
-            fileUpload: document.getElementById('fileUpload'),
-            loadButton: document.getElementById('loadButton'),
-            settingsContainer: document.getElementById('settingsContainer'),
-            kFactorSlider: document.getElementById('kFactorSlider'),
-            kFactorValue: document.getElementById('kFactorValue'),
-            minCompsSlider: document.getElementById('minCompsSlider'),
-            minCompsValue: document.getElementById('minCompsValue'),
-            startButton: document.getElementById('startButton'),
-            comparisonContainer: document.getElementById('comparisonContainer'),
-            taskA: document.getElementById('taskA'),
-            taskB: document.getElementById('taskB'),
-            taskAId: document.getElementById('taskAId'),
-            taskBId: document.getElementById('taskBId'),
-            taskADescription: document.getElementById('taskADescription'),
-            taskBDescription: document.getElementById('taskBDescription'),
-            taskARating: document.getElementById('taskARating'),
-            taskBRating: document.getElementById('taskBRating'),
-            resultContainer: document.getElementById('resultContainer'),
-            resultBody: document.getElementById('resultBody'),
-            exportButton: document.getElementById('exportButton'),
-            skipButton: document.getElementById('skipButton'),
-            undoButton: document.getElementById('undoButton'),
-            saveButton: document.getElementById('saveButton'),
-            progressBar: document.getElementById('progressBar'),
-            status: document.getElementById('status'),
-            moreComparisonsButton: document.getElementById('moreComparisonsButton'),
-            clearStorageButton: document.getElementById('clearStorageButton'),
-            savedSessionBanner: document.getElementById('savedSessionBanner'),
-            loadSavedSession: document.getElementById('loadSavedSession')
-        };
-
-        // Check for saved session when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            checkForSavedSession();
-        });
-
-        // Check if there's a saved session in localStorage
-        function checkForSavedSession() {
-            if (localStorage.getItem('taskOrderSessionData')) {
-                elements.savedSessionBanner.style.display = 'block';
-            }
-        }
-
-        // Load saved session from localStorage
-        elements.loadSavedSession.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            try {
-                const savedData = JSON.parse(localStorage.getItem('taskOrderSessionData'));
-                
-                // Restore all saved data
-                tasks = savedData.tasks;
-                taskIds = savedData.taskIds;
-                taskRatings = savedData.taskRatings;
-                taskComparisonCount = savedData.taskComparisonCount;
-                previousRanks = savedData.previousRanks;
-                taskStatus = savedData.taskStatus;
-                comparisonHistory = savedData.comparisonHistory;
-                completedComparisons = savedData.completedComparisons;
-                requiredComparisons = savedData.requiredComparisons;
-                comparisonQueue = savedData.comparisonQueue;
-                kFactor = savedData.kFactor;
-                minComparisonsPerTask = savedData.minComparisonsPerTask;
-                
-                // Update UI to reflect loaded data
-                elements.kFactorSlider.value = kFactor;
-                elements.kFactorValue.textContent = kFactor;
-                elements.minCompsSlider.value = minComparisonsPerTask;
-                elements.minCompsValue.textContent = minComparisonsPerTask;
-                
-                // Hide the banner and upload container
-                elements.savedSessionBanner.style.display = 'none';
-                document.querySelector('.upload-container').style.display = 'none';
-                
-                // Show the results and comparisons
-                elements.resultContainer.style.display = 'block';
-                elements.saveButton.style.display = 'inline-block';
-                
-                // Generate new comparisons if needed and continue
-                if (comparisonQueue.length === 0) {
-                    generateComparisonQueue();
-                }
-                
-                // Update the results table
-                updateResultTable();
-                updateProgressBar();
-                
-                // Start comparisons if there are comparisons left
-                if (comparisonQueue.length > 0) {
-                    showNextComparison();
-                    elements.skipButton.style.display = 'inline-block';
-                    elements.undoButton.style.display = 'inline-block';
-                } else {
-                    elements.status.textContent = 'All necessary comparisons complete!';
-                }
-                
-                // Show success message
-                alert('Session loaded successfully!');
-            } catch (error) {
-                console.error('Error loading saved session:', error);
-                alert('Error loading saved session. The saved data may be corrupted.');
-            }
-        });
-
-        // Save current session to localStorage
-        function saveSessionToLocalStorage() {
-            try {
-                const sessionData = {
-                    tasks,
-                    taskIds,
-                    taskRatings,
-                    taskComparisonCount,
-                    previousRanks,
-                    taskStatus,
-                    comparisonHistory,
-                    completedComparisons,
-                    requiredComparisons,
-                    comparisonQueue,
-                    kFactor,
-                    minComparisonsPerTask
-                };
-                
-                localStorage.setItem('taskOrderSessionData', JSON.stringify(sessionData));
-                return true;
-            } catch (error) {
-                console.error('Error saving session:', error);
-                return false;
-            }
-        }
-
-        // Clear saved data from localStorage
-        elements.clearStorageButton.addEventListener('click', function() {
-            if (confirm('Are you sure you want to clear all saved data? This cannot be undone.')) {
-                localStorage.removeItem('taskOrderSessionData');
-                location.reload();
-            }
-        });
-
-        // Save button functionality
-        elements.saveButton.addEventListener('click', function() {
-            if (saveSessionToLocalStorage()) {
-                alert('Session saved successfully!');
+        function initializeTaskComparison(uploadedTasks, existingRatings = []) {
+            // Stratified sampling if ratings are provided
+            if (existingRatings.length > 0) {
+                const stratifiedTasks = stratifiedSampling(existingRatings, uploadedTasks);
+                tasks = stratifiedTasks;
             } else {
-                alert('Error saving session. Please try again.');
+                tasks = uploadedTasks;
             }
-        });
 
-        // Event listeners for sliders
-        elements.kFactorSlider.addEventListener('input', function() {
-            kFactor = parseInt(this.value);
-            elements.kFactorValue.textContent = kFactor;
-        });
-
-        elements.minCompsSlider.addEventListener('input', function() {
-            minComparisonsPerTask = parseInt(this.value);
-            elements.minCompsValue.textContent = minComparisonsPerTask;
-        });
-
-        // Load tasks from Excel file
-        elements.loadButton.addEventListener('click', function() {
-            const file = elements.fileUpload.files[0];
-            if (!file) { alert('Please select an Excel file'); return; }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-                
-                // Extract task IDs and descriptions from the Excel file
-                taskIds = [];
-                tasks = [];
-                
-                jsonData.forEach(row => {
-                    if (row && row.length >= 2 && row[0] && row[1]) {
-                        taskIds.push(row[0].toString()); // Convert ID to string to handle numbers
-                        tasks.push(row[1].toString());
-                    }
-                });
-                
-                if (tasks.length < 2) { alert('Need at least 2 tasks to compare'); return; }
-
-                elements.settingsContainer.style.display = 'block';
-                
-                // Initialize task data
-                tasks.forEach((task, index) => {
-                    taskRatings[index] = 1500;
-                    taskComparisonCount[index] = 0;
-                    taskStatus[index] = 'Not rated';
-                    previousRanks[index] = index;
-                });
-                
-                requiredComparisons = Math.min(tasks.length * minComparisonsPerTask / 2, tasks.length * (tasks.length - 1) / 2);
-                elements.status.textContent = `Loaded ${tasks.length} tasks. Estimated comparisons needed: ~${Math.ceil(requiredComparisons)}`;
-                
-                // Hide the saved session banner if it was visible
-                elements.savedSessionBanner.style.display = 'none';
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        // Start comparisons
-        elements.startButton.addEventListener('click', function() {
-            elements.settingsContainer.style.display = 'none';
-            generateComparisonQueue();
-            showNextComparison();
-            elements.skipButton.style.display = 'inline-block';
-            elements.undoButton.style.display = 'inline-block';
-            elements.saveButton.style.display = 'inline-block';
-            elements.resultContainer.style.display = 'block';
-            updateResultTable();
-        });
-
-        // Generate optimized comparison queue
-        function generateComparisonQueue() {
-            comparisonQueue = [];
-            
-            // Get under-compared tasks
-            let underComparedTasks = Object.keys(taskComparisonCount)
-                .filter(index => taskComparisonCount[index] < minComparisonsPerTask)
-                .map(index => parseInt(index));
-            
-            // If all tasks have minimum comparisons, compare closest ratings
-            if (underComparedTasks.length === 0) {
-                const sortedTasks = Object.keys(taskRatings)
-                    .map(index => parseInt(index))
-                    .sort((a, b) => taskRatings[a] - taskRatings[b]);
-                
-                for (let i = 0; i < sortedTasks.length - 1; i++) {
-                    comparisonQueue.push([sortedTasks[i], sortedTasks[i+1]]);
+            // Initialize ELO ratings
+            tasks.forEach(task => {
+                if (!taskRatings[task[0]]) {
+                    taskRatings[task[0]] = {
+                        fullTask: task,
+                        rating: 1500,
+                        comparisons: 0,
+                        wasRated: false
+                    };
                 }
-            } else {
-                // Prioritize under-compared tasks
-                underComparedTasks.forEach(taskIndex => {
-                    const opponents = Object.keys(taskRatings)
-                        .map(index => parseInt(index))
-                        .filter(index => index !== taskIndex)
-                        .sort((a, b) => Math.abs(taskRatings[a] - taskRatings[taskIndex]) - 
-                                        Math.abs(taskRatings[b] - taskRatings[taskIndex]));
-                    
-                    for (let i = 0; i < Math.min(3, opponents.length); i++) {
-                        const pair = [taskIndex, opponents[i]].sort();
-                        if (!comparisonHistory.some(comp => comp.indexA === pair[0] && comp.indexB === pair[1])) {
-                            comparisonQueue.push(pair);
-                        }
-                    }
-                });
-            }
-            
-            // Shuffle and remove duplicates
-            shuffleArray(comparisonQueue);
-            comparisonQueue = Array.from(new Set(comparisonQueue.map(JSON.stringify)), JSON.parse);
+            });
+
+            // Update tasks preview
+            updateTasksPreview(tasks);
+
+            selectNextPair();
+            document.getElementById('comparisonContainer').style.display = 'block';
+            document.getElementById('exportArea').style.display = 'block';
+            document.getElementById('tasksPreview').style.display = 'block';
+            updateProgress();
         }
 
-        // Show next comparison
-        function showNextComparison() {
-            // Disable undo button when no comparison to undo
-            elements.undoButton.disabled = !lastComparison;
-            
-            if (comparisonQueue.length === 0) {
-                const underComparedTasks = Object.keys(taskComparisonCount)
-                    .filter(index => taskComparisonCount[index] < minComparisonsPerTask);
-                
-                if (underComparedTasks.length > 0 && completedComparisons < tasks.length * (tasks.length - 1) / 2) {
-                    generateComparisonQueue();
-                    showNextComparison();
-                    return;
+        function updateTasksPreview(previewTasks) {
+            const previewBody = document.getElementById('tasksPreviewBody');
+            previewBody.innerHTML = ''; // Clear previous preview
+
+            // Calculate current rankings
+            const rankedTasks = Object.values(taskRatings)
+                .sort((a, b) => b.rating - a.rating);
+            const rankMap = new Map(rankedTasks.map((task, index) => [task.fullTask[0], index + 1]));
+
+            // Store current tasks before filtering
+            const currentTaskIds = new Set(previewTasks.map(task => task[0]));
+
+            // Include all tasks that have been rated or are in current comparison
+            const allTasks = Object.values(taskRatings)
+                .filter(taskRating =>
+                    currentTaskIds.has(taskRating.fullTask[0]) ||
+                    taskRating.comparisons > 0
+                )
+                .map(taskRating => taskRating.fullTask);
+
+            allTasks.forEach(task => {
+                const row = previewBody.insertRow();
+
+                // Original task columns (0-10)
+                for (let i = 0; i < 11; i++) {
+                    const cell = row.insertCell(i);
+                    cell.textContent = task[i];
+                    cell.title = task[i]; // Full text in hover
                 }
-                
-                elements.comparisonContainer.style.display = 'none';
-                elements.skipButton.style.display = 'none';
-                elements.status.textContent = 'All necessary comparisons complete!';
+
+                // ELO Rating (index 11)
+                const ratingCell = row.insertCell(11);
+                const taskRating = taskRatings[task[0]];
+                ratingCell.textContent = Math.round(taskRating.rating);
+
+                // Comparisons (index 12)
+                const comparisonsCell = row.insertCell(12);
+                comparisonsCell.textContent = taskRating.comparisons;
+
+                // Current Rank (index 13)
+                const rankCell = row.insertCell(13);
+                rankCell.textContent = rankMap.get(task[0]) || 'N/A';
+            });
+
+            // Optional: Sort rows by rank
+            const sortedRows = Array.from(previewBody.querySelectorAll('tr'))
+                .sort((a, b) => {
+                    const rankA = parseInt(a.cells[13].textContent);
+                    const rankB = parseInt(b.cells[13].textContent);
+                    return rankA - rankB;
+                });
+
+            // Clear and re-add sorted rows
+            previewBody.innerHTML = '';
+            sortedRows.forEach(row => previewBody.appendChild(row));
+        }
+
+        function stratifiedSampling(existingRatings, newTasks) {
+            // Group existing ratings by segment
+            const ratingSegments = {};
+            existingRatings.forEach(rating => {
+                const segment = rating[11] || '0';
+                if (!ratingSegments[segment]) ratingSegments[segment] = [];
+                ratingSegments[segment].push(rating);
+            });
+
+            // Randomly sample equal number of tasks from each segment
+            const sampledTasks = [];
+            Object.values(ratingSegments).forEach(segment => {
+                const randomTasks = segment.sort(() => 0.5 - Math.random()).slice(0, 5);
+                sampledTasks.push(...randomTasks);
+            });
+
+            // Add new tasks
+            sampledTasks.push(...newTasks);
+
+            return sampledTasks;
+        }
+
+        function selectNextPair() {
+            if (tasks.length < 2) {
+                showFinalRanking();
                 return;
             }
-            
-            currentPair = comparisonQueue.shift();
-            const [indexA, indexB] = currentPair;
-            
-            // Update the task displays
-            elements.taskAId.textContent = `ID: ${taskIds[indexA]}`;
-            elements.taskBId.textContent = `ID: ${taskIds[indexB]}`;
-            elements.taskADescription.textContent = tasks[indexA];
-            elements.taskBDescription.textContent = tasks[indexB];
-            elements.taskARating.textContent = `Rating: ${Math.round(taskRatings[indexA])} (${taskComparisonCount[indexA]} comparisons)`;
-            elements.taskBRating.textContent = `Rating: ${Math.round(taskRatings[indexB])} (${taskComparisonCount[indexB]} comparisons)`;
-            
-            // Store the current indices for the next comparison
-            previousTaskIndices = [indexA, indexB];
-            
-            elements.comparisonContainer.style.display = 'flex';
-            elements.status.textContent = `Comparison ${completedComparisons + 1} of ~${Math.ceil(requiredComparisons)}`;
-            updateProgressBar();
+
+            // Randomly select two different tasks
+            const indices = getRandomPairIndices();
+            currentPair = [tasks[indices[0]], tasks[indices[1]]];
+
+            document.getElementById('task1').textContent = currentPair[0][1];
+            document.getElementById('task2').textContent = currentPair[1][1];
         }
 
-        // Event listeners for comparison actions
-        elements.taskA.addEventListener('click', function() {
-            if (currentPair.length === 2) {
-                const [indexA, indexB] = currentPair;
-                
-                // Save current state for undo
-                saveStateForUndo(indexA, indexB);
-                
-                updateEloRatings(indexA, indexB, 1); // A wins
-                recordComparison(indexA, indexB);
-            }
-        });
+        function getRandomPairIndices() {
+            const index1 = Math.floor(Math.random() * tasks.length);
+            let index2 = Math.floor(Math.random() * tasks.length);
 
-        elements.taskB.addEventListener('click', function() {
-            if (currentPair.length === 2) {
-                const [indexA, indexB] = currentPair;
-                
-                // Save current state for undo
-                saveStateForUndo(indexA, indexB);
-                
-                updateEloRatings(indexA, indexB, 0); // B wins
-                recordComparison(indexA, indexB);
+            while (index2 === index1) {
+                index2 = Math.floor(Math.random() * tasks.length);
             }
-        });
 
-        elements.skipButton.addEventListener('click', showNextComparison);
-        
-        // Undo button functionality
-        elements.undoButton.addEventListener('click', function() {
-            if (!lastComparison) return;
-            
-            const [indexA, indexB] = lastComparison;
-            
-            // Restore previous ratings
-            const previousTaskRatings = comparisonHistory.pop().previousRatings;
-            taskRatings[indexA] = previousTaskRatings[indexA];
-            taskRatings[indexB] = previousTaskRatings[indexB];
-            
-            // Decrement comparison counts
-            taskComparisonCount[indexA]--;
-            taskComparisonCount[indexB]--;
-            
-            // Update status if necessary
-            if (taskComparisonCount[indexA] === 0) taskStatus[indexA] = 'Not rated';
-            if (taskComparisonCount[indexB] === 0) taskStatus[indexB] = 'Not rated';
-            
-            completedComparisons--;
-            
-            // Add comparison back to queue for another try
-            comparisonQueue.unshift([indexA, indexB]);
-            
-            // Clear last comparison since we've used it
-            lastComparison = null;
-            elements.undoButton.disabled = true;
-            
-            // Update UI
-            updateResultTable();
-            updateProgressBar();
-            showNextComparison();
-        });
-        
-        elements.moreComparisonsButton.addEventListener('click', function() {
-            requiredComparisons += tasks.length;
-            generateComparisonQueue();
-            if (elements.comparisonContainer.style.display === 'none') {
-                showNextComparison();
-                elements.skipButton.style.display = 'inline-block';
-                elements.undoButton.style.display = 'inline-block';
-            }
-            updateProgressBar();
-        });
+            return [index1, index2];
+        }
 
-        // Save current state for undo
-        function saveStateForUndo(indexA, indexB) {
-            lastComparison = [indexA, indexB];
-            
-            // Store previous ratings for undo operation
-            const previousRatings = {};
-            previousRatings[indexA] = taskRatings[indexA];
-            previousRatings[indexB] = taskRatings[indexB];
-            
-            // Add to comparison history with saved ratings
-            comparisonHistory.push({
-                indexA: indexA,
-                indexB: indexB,
-                previousRatings: previousRatings
+        function selectTask(taskNumber) {
+            const winnerId = currentPair[taskNumber - 1][0];
+            const loserId = currentPair[2 - taskNumber][0];
+
+            updateEloRatings(winnerId, loserId);
+
+            // Remove compared tasks from original tasks
+            tasks = tasks.filter(task =>
+                task[0] !== currentPair[0][0] && task[0] !== currentPair[1][0]
+            );
+
+            comparedPairs.push({
+                winner: winnerId,
+                loser: loserId,
+                timestamp: new Date().toISOString()
             });
+
+            // Update tasks preview with all tasks that have been compared
+            updateTasksPreview(tasks);
+
+            selectNextPair();
+            updateProgress();
         }
 
-        // Record comparison and move to next
-        function recordComparison(indexA, indexB) {
-            taskStatus[indexA] = taskStatus[indexB] = 'Rated';
-            taskComparisonCount[indexA]++;
-            taskComparisonCount[indexB]++;
-            completedComparisons++;
-            
-            // Save current ranks for position change tracking
-            savePreviousRanks();
-            updateResultTable();
-            showNextComparison();
-            
-            // Auto-save after each comparison
-            saveSessionToLocalStorage();
+        function updateEloRatings(winnerId, loserId) {
+            const winnerRating = taskRatings[winnerId].rating;
+            const loserRating = taskRatings[loserId].rating;
+
+            const expectedScoreWinner = 1 / (1 + Math.pow(10, (loserRating - winnerRating) / 400));
+            const expectedScoreLoser = 1 - expectedScoreWinner;
+
+            taskRatings[winnerId].rating += K_FACTOR * (1 - expectedScoreWinner);
+            taskRatings[loserId].rating += K_FACTOR * (0 - expectedScoreLoser);
+
+            taskRatings[winnerId].comparisons++;
+            taskRatings[loserId].comparisons++;
+
+            // Mark as rated
+            taskRatings[winnerId].wasRated = true;
+            taskRatings[loserId].wasRated = true;
         }
 
-        // Save current ranks for change tracking
-        function savePreviousRanks() {
-            const sortedTasks = Object.keys(taskRatings)
-                .map(index => parseInt(index))
-                .sort((a, b) => taskRatings[b] - taskRatings[a]);
-            
-            sortedTasks.forEach((taskIndex, rank) => {
-                previousRanks[taskIndex] = rank;
-            });
+        function undoLastComparison() {
+            if (comparedPairs.length === 0) return;
+
+            const lastComparison = comparedPairs.pop();
+
+            // Retrieve the full task details for both tasks in the last comparison
+            const winnerTask = taskRatings[lastComparison.winner].fullTask;
+            const loserTask = taskRatings[lastComparison.loser].fullTask;
+
+            // Add both tasks back to the tasks array
+            tasks.push(winnerTask, loserTask);
+
+            // Rollback ELO ratings (simplified approach)
+            taskRatings[lastComparison.winner].rating -= K_FACTOR / 2;
+            taskRatings[lastComparison.loser].rating += K_FACTOR / 2;
+
+            taskRatings[lastComparison.winner].comparisons--;
+            taskRatings[lastComparison.loser].comparisons--;
+
+            // Reset rated status if no more comparisons
+            if (taskRatings[lastComparison.winner].comparisons === 0) {
+                taskRatings[lastComparison.winner].wasRated = false;
+            }
+            if (taskRatings[lastComparison.loser].comparisons === 0) {
+                taskRatings[lastComparison.loser].wasRated = false;
+            }
+
+            // Restore the previous pair for comparison
+            currentPair = [winnerTask, loserTask];
+
+            // Update the task cards with the previous tasks
+            document.getElementById('task1').textContent = currentPair[0][1];
+            document.getElementById('task2').textContent = currentPair[1][1];
+
+            // Update tasks preview with all tasks that have been compared
+            updateTasksPreview(tasks);
+
+            updateProgress();
         }
 
-        // Update ELO ratings
-        function updateEloRatings(indexA, indexB, outcome) {
-            const expectedA = 1 / (1 + Math.pow(10, (taskRatings[indexB] - taskRatings[indexA]) / 400));
-            taskRatings[indexA] = taskRatings[indexA] + kFactor * (outcome - expectedA);
-            taskRatings[indexB] = taskRatings[indexB] + kFactor * ((1 - outcome) - (1 - expectedA));
+        function updateProgress() {
+            document.getElementById('comparisonCount').textContent = comparedPairs.length;
+            document.getElementById('remainingTasks').textContent = tasks.length;
         }
 
-        // Update the progress bar
-        function updateProgressBar() {
-            const percentage = Math.min(100, (completedComparisons / requiredComparisons) * 100);
-            elements.progressBar.style.width = `${percentage}%`;
-        }
-
-        // Update result table
-        function updateResultTable() {
-            const sortedTasks = Object.keys(taskRatings)
-                .map(index => ({
-                    index: parseInt(index),
-                    id: taskIds[index],
-                    description: tasks[index],
-                    rating: taskRatings[index],
-                    comparisons: taskComparisonCount[index],
-                    status: taskStatus[index],
-                    previousRank: previousRanks[index]
-                }))
+        function showFinalRanking() {
+            const rankedTasks = Object.values(taskRatings)
                 .sort((a, b) => b.rating - a.rating);
-            
-            elements.resultBody.innerHTML = '';
-            
-            sortedTasks.forEach((task, rank) => {
-                const row = document.createElement('tr');
-                
-                // Determine position change
-                let positionChangeClass = '';
-                let positionChangeIcon = '';
-                
-                if (completedComparisons > 0) {
-                    if (task.previousRank > rank) {
-                        positionChangeClass = 'moved-up';
-                        positionChangeIcon = `<span class="position-change up">↑ ${task.previousRank - rank}</span>`;
-                    } else if (task.previousRank < rank) {
-                        positionChangeClass = 'moved-down';
-                        positionChangeIcon = `<span class="position-change down">↓ ${rank - task.previousRank}</span>`;
-                    }
-                }
-                
-                row.className = positionChangeClass;
-                
-                row.innerHTML = `
-                    <td>${rank + 1}${positionChangeIcon}</td>
-                    <td>${task.id}</td>
-                    <td>${task.description}</td>
-                    <td>${Math.round(task.rating)}</td>
-                    <td>${task.comparisons}</td>
-                    <td>${task.status}</td>
-                `;
-                
-                elements.resultBody.appendChild(row);
-                
-                // Remove highlight after animation
-                if (positionChangeClass) {
-                    setTimeout(() => {
-                        row.className = '';
-                    }, 2000);
-                }
+
+            const table = document.getElementById('rankedTasksTable');
+            table.innerHTML = `
+                <tr>
+                    <th>Rank</th>
+                    <th>Task ID</th>
+                    <th>Description</th>
+                    <th>Min Duration</th>
+                    <th>Max Duration</th>
+                    <th>With Partner</th>
+                    <th>Finisher</th>
+                    <th>Punishment</th>
+                    <th>Dom Sexy Bits</th>
+                    <th>Sub Sexy Bits</th>
+                    <th>Toy Types</th>
+                    <th>KNK Preferences</th>
+                    <th>Task Rank</th>
+                    <th>Was Rated</th>
+                </tr>
+            `;
+
+            rankedTasks.forEach((taskRating, index) => {
+                const row = table.insertRow();
+                const task = taskRating.fullTask;
+
+                row.insertCell(0).textContent = index + 1;
+                row.insertCell(1).textContent = task[0];
+                row.insertCell(2).textContent = task[1];
+                row.insertCell(3).textContent = task[2];
+                row.insertCell(4).textContent = task[3];
+                row.insertCell(5).textContent = task[4];
+                row.insertCell(6).textContent = task[5];
+                row.insertCell(7).textContent = task[6];
+                row.insertCell(8).textContent = task[7];
+                row.insertCell(9).textContent = task[8];
+                row.insertCell(10).textContent = task[9];
+                row.insertCell(11).textContent = task[10];
+
+                // Task Rank (ELO Rating)
+                row.insertCell(12).textContent = Math.round(taskRating.rating);
+
+                // Was Rated
+                row.insertCell(13).textContent = taskRating.wasRated;
             });
         }
 
-        // Export results to Excel
-        elements.exportButton.addEventListener('click', function() {
-            const sortedTasks = Object.keys(taskRatings)
-                .map(index => ({
-                    Rank: 0,
-                    'Task ID': taskIds[index],
-                    Description: tasks[index],
-                    'ELO Rating': Math.round(taskRatings[index]),
-                    Comparisons: taskComparisonCount[index],
-                    Status: taskStatus[index]
-                }))
-                .sort((a, b) => b['ELO Rating'] - a['ELO Rating']);
-            
-            sortedTasks.forEach((task, index) => { task.Rank = index + 1; });
-            
-            const ws = XLSX.utils.json_to_sheet(sortedTasks);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Task Priorities');
-            XLSX.writeFile(wb, 'task_order.xlsx');
+        function exportRankedTasks() {
+            // Collect data directly from the preview table
+            const previewBody = document.getElementById('tasksPreviewBody');
+            const rows = previewBody.querySelectorAll('tr');
+
+            const exportData = Array.from(rows).map(row => {
+                const cells = row.querySelectorAll('td');
+                return {
+                    'Rank': cells[13].textContent,
+                    'Task ID': cells[0].textContent,
+                    'Description': cells[1].textContent,
+                    'Min Duration (s)': cells[2].textContent,
+                    'Max Duration (s)': cells[3].textContent,
+                    'With Partner': cells[4].textContent,
+                    'Finisher': cells[5].textContent,
+                    'Punishment': cells[6].textContent,
+                    'Dom Sexy Bits': cells[7].textContent,
+                    'Sub Sexy Bits': cells[8].textContent,
+                    'Toy Types': cells[9].textContent,
+                    'KNK Preferences': cells[10].textContent,
+                    'ELO Rating': cells[11].textContent,
+                    'Comparisons': cells[12].textContent,
+                    'Was Rated': taskRatings[cells[0].textContent].wasRated
+                };
+            });
+
+            // Create workbook and worksheet
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Ranked Tasks');
+
+            // Export the file
+            XLSX.writeFile(workbook, 'ranked_tasks.xlsx', { compression: true });
+        }
+
+        function saveProgress() {
+            const saveData = {
+                tasks: tasks,
+                comparedPairs: comparedPairs,
+                taskRatings: taskRatings,
+                currentPair: currentPair
+            };
+            localStorage.setItem('pairwiseComparison', JSON.stringify(saveData));
+            alert('Progress saved successfully!');
+        }
+
+        function loadProgress() {
+            const savedData = localStorage.getItem('pairwiseComparison');
+            if (savedData) {
+                try {
+                    const parsedData = JSON.parse(savedData);
+                    tasks = parsedData.tasks;
+                    comparedPairs = parsedData.comparedPairs;
+                    taskRatings = parsedData.taskRatings;
+                    currentPair = parsedData.currentPair;
+
+                    if (tasks.length >= 2) {
+                        // Update tasks preview
+                        updateTasksPreview(tasks);
+
+                        document.getElementById('task1').textContent = currentPair[0][1];
+                        document.getElementById('task2').textContent = currentPair[1][1];
+                        document.getElementById('comparisonContainer').style.display = 'block';
+                        document.getElementById('exportArea').style.display = 'block';
+                        document.getElementById('tasksPreview').style.display = 'block';
+                        updateProgress();
+                    }
+                } catch (error) {
+                    console.error('Error loading saved progress:', error);
+                    localStorage.removeItem('pairwiseComparison');
+                    alert('Saved progress was corrupted and has been cleared.');
+                }
+            }
+        }
+
+        function resetRatings() {
+            // Confirm before resetting
+            if (!confirm('Are you sure you want to reset all ratings? This cannot be undone.')) {
+                return;
+            }
+
+            // Reset global variables
+            tasks = [];
+            comparedPairs = [];
+            currentPair = null;
+            taskRatings = {};
+
+            // Clear UI elements
+            document.getElementById('comparisonCount').textContent = '0';
+            document.getElementById('remainingTasks').textContent = '0';
+            document.getElementById('task1').textContent = '';
+            document.getElementById('task2').textContent = '';
+            document.getElementById('tasksPreviewBody').innerHTML = '';
+            document.getElementById('rankedTasksTable').innerHTML = '';
+
+            // Hide containers
+            document.getElementById('comparisonContainer').style.display = 'none';
+            document.getElementById('exportArea').style.display = 'none';
+            document.getElementById('tasksPreview').style.display = 'none';
+
+            // Reset file inputs
+            document.getElementById('tasksFile').value = '';
+            document.getElementById('ratingsFile').value = '';
+
+            // Optional: Clear session-specific local storage
+            localStorage.removeItem('pairwiseComparison');
+
+            alert('All ratings have been reset. Please upload tasks again.');
+        }
+
+        function clearLocalStorage() {
+            // Confirm before clearing
+            if (!confirm('Are you sure you want to clear ALL local storage for this app? This cannot be undone.')) {
+                return;
+            }
+
+            // Clear entire local storage
+            localStorage.clear();
+
+            // Reset the application state
+            resetRatings();
+
+            alert('Local storage has been completely cleared.');
+        }
+
+
+        // File upload handlers
+        document.getElementById('tasksFile').addEventListener('change', function (e) {
+            Papa.parse(e.target.files[0], {
+                complete: function (results) {
+                    // Remove header if present
+                    const tasks = results.data[0][0] === 'Task ID' ? results.data.slice(1) : results.data;
+                    initializeTaskComparison(tasks);
+                }
+            });
         });
 
-        // Utility function to shuffle array
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
+        document.getElementById('ratingsFile').addEventListener('change', function (e) {
+            Papa.parse(e.target.files[0], {
+                complete: function (results) {
+                    // Remove header if present
+                    const ratings = results.data[0][0] === 'Task ID' ? results.data.slice(1) : results.data;
+
+                    Papa.parse(document.getElementById('tasksFile').files[0], {
+                        complete: function (tasksResults) {
+                            const tasks = tasksResults.data[0][0] === 'Task ID' ? tasksResults.data.slice(1) : tasksResults.data;
+                            initializeTaskComparison(tasks, ratings);
+                        }
+                    });
+                }
+            });
+        });
+
+        // Load saved progress on page load
+        window.addEventListener('load', loadProgress);
     </script>
 </body>
+
 </html>
