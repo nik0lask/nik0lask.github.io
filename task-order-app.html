@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Task Comparison Tool</title>
+    <title>Task Orderer App</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -191,6 +191,10 @@
             margin-bottom: 2rem;
         }
 
+        .file-upload.hidden {
+            display: none;
+        }
+
         @media only screen and (max-width: 600px) {
             .comparison-area {
                 display: flex;
@@ -202,7 +206,7 @@
 
 <body>
     <div class="container">
-        <h1 class="app-title">Task Comparison Dashboard</h1>
+        <h1 class="app-title">Task Orderer App</h1>
 
         <div class="control-buttons">
             <button class="btn btn-danger" onclick="resetRatings()">
@@ -214,12 +218,12 @@
         </div>
 
         <div class="file-upload">
-            <h3>Upload Tasks CSV</h3>
+            <h3>Upload Tasks (.csv)</h3>
             <input type="file" id="tasksFile" accept=".csv">
         </div>
 
-        <div class="file-upload">
-            <h3>Optional: Upload Existing Ratings CSV</h3>
+        <div id="ratingsFileUpload" class="file-upload hidden">
+            <h3>Optional: Upload Existing Tasks (.csv)</h3>
             <input type="file" id="ratingsFile" accept=".csv">
         </div>
 
@@ -701,6 +705,9 @@
                     // Remove header if present
                     const tasks = results.data[0][0] === 'Task ID' ? results.data.slice(1) : results.data;
                     initializeTaskComparison(tasks);
+
+                    // Show the optional ratings file upload
+                    document.getElementById('ratingsFileUpload').classList.remove('hidden');
                 }
             });
         });
