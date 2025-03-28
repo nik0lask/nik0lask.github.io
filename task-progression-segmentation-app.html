@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Ranking Segmentation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        @keyframes gradientBG {
+            0% {background-position: 0% 50%;}
+            50% {background-position: 100% 50%;}
+            100% {background-position: 0% 50%;}
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            width: 90%;
+            max-width: 900px;
+            margin-top: 30px;
+            box-shadow: 0 15px 25px rgba(0,0,0,0.1);
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0; transform: translateY(20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255,255,255,0.2);
+            border: 2px dashed rgba(255,255,255,0.4);
+            border-radius: 10px;
+            color: white;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="file"]:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(to right, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(50,50,93,0.1), 0 3px 6px rgba(0,0,0,0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            animation: slideIn 0.7s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {opacity: 0; transform: scale(0.95);}
+            to {opacity: 1; transform: scale(1);}
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        th {
+            background-color: #f4f4f4;
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+            transition: background-color 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Task Ranking Segmentation</h1>
+        <input type="file" id="fileInput" accept=".xlsx, .xls">
+        <button id="processBtn">Process File</button>
+        <button id="downloadBtn" style="display:none;">Download CSV</button>
+    </div>
+
+    <script>
+        document.getElementById('processBtn').addEventListener('click', processFile);
+        document.getElementById('downloadBtn').addEventListener('click', downloadCSV);
+
+        function processFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                
+                // Assume first sheet
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                
+                // Define column indices based on the specified order
+                const columns = {
+                    rank: 0,
+                    taskId: 1,
+                    description: 2,
+                    minDuration: 3,
+                    maxDuration: 4,
+                    withPartner: 5,
+                    finisher: 6,
+                    punishment: 7,
+                    domSexyBits: 8,
+                    subSexyBits: 9,
+                    toyTypes: 10,
+                    kinkPreferences: 11,
+                    elo: 12,
+                    comparisons: 13,
+                    wasRated: 14
+                };
+
+                // Filter and process tasks
+                const ratedTasks = jsonData.slice(1).filter(row => 
+                    row[columns.wasRated] === "true"
+                );
+                
+                // Sort tasks by ELO rating
+                const sortedTasks = ratedTasks.sort((a, b) => b[columns.elo] - a[columns.elo]);
+                
+                // Divide into 5 segments
+                const totalTasks = sortedTasks.length;
+                const segmentSize = Math.floor(totalTasks / 5);
+                
+                const rankedTasks = sortedTasks.map((task, index) => {
+                    // Invert segment calculation: highest rated tasks go to 5th segment
+                    const segment = 5 - Math.min(4, Math.floor(index / segmentSize));
+                    
+                    // Return task with specified columns for export
+                    return [
+                        task[columns.taskId],
+                        task[columns.description],
+                        task[columns.minDuration],
+                        task[columns.maxDuration],
+                        task[columns.withPartner],
+                        task[columns.finisher],
+                        task[columns.punishment],
+                        task[columns.domSexyBits],
+                        task[columns.subSexyBits],
+                        task[columns.toyTypes],
+                        task[columns.kinkPreferences],
+                        segment
+                    ];
+                });
+
+                displayResults(rankedTasks);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function displayResults(tasks) {
+            const container = document.querySelector('.container');
+            
+            // Remove existing table if present
+            const existingTable = document.getElementById('resultTable');
+            if (existingTable) {
+                existingTable.remove();
+            }
+
+            // Create new table
+            const table = document.createElement('table');
+            table.id = 'resultTable';
+            
+            // Create table header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            const headers = [
+                'Task ID', 'Description', 'Min Duration', 'Max Duration', 
+                'With Partner', 'Finisher', 'Punishment', 'Dom Sexy Bits', 
+                'Sub Sexy Bits', 'Toy Types', 'Kink Preferences', 'Rank Segment'
+            ];
+            
+            headers.forEach(headerText => {
+                const th = document.createElement('th');
+                th.textContent = headerText;
+                headerRow.appendChild(th);
+            });
+            
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create table body
+            const tbody = document.createElement('tbody');
+            tasks.forEach(task => {
+                const row = document.createElement('tr');
+                task.forEach(cellData => {
+                    const td = document.createElement('td');
+                    td.textContent = cellData;
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            
+            table.appendChild(tbody);
+            container.appendChild(table);
+
+            // Show download button
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.style.display = 'inline-block';
+
+            // Store tasks for potential download
+            window.currentTasks = tasks;
+        }
+
+        function downloadCSV() {
+            if (!window.currentTasks) {
+                alert('No tasks to download');
+                return;
+            }
+
+            // Get current date in YYYY-MM-DD format
+            const currentDate = new Date().toISOString().split('T')[0];
+
+            // Prepare CSV content
+            const headers = [
+                'Task ID', 'Description', 'Min Duration', 'Max Duration', 
+                'With Partner', 'Finisher', 'Punishment', 'Dom Sexy Bits', 
+                'Sub Sexy Bits', 'Toy Types', 'Kink Preferences', 'Rank Segment'
+            ];
+
+            const csvContent = [
+                headers.join(','),
+                ...window.currentTasks.map(task => task.join(','))
+            ].join('\n');
+
+            // Create and trigger download
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `progression_segmented_tasks-${currentDate}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
