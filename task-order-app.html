@@ -140,6 +140,7 @@
             text-align: center;
             margin-bottom: 1.5rem;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             gap: 2rem;
         }
@@ -195,6 +196,32 @@
             display: none;
         }
 
+        .progress-bar-container {
+            width: 100%;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .progress-bar-label {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .progress-bar-outer {
+            width: 100%;
+            height: 12px;
+            background-color: var(--background-light);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-bar-inner {
+            height: 100%;
+            width: 0%;
+            background-color: var(--primary-color);
+            transition: width 0.5s ease-in-out;
+        }
+
         @media only screen and (max-width: 600px) {
             .comparison-area {
                 display: flex;
@@ -229,11 +256,19 @@
 
         <div id="comparisonContainer" style="display:none;">
             <div class="progress">
-                <div class="progress-item">
-                    Comparisons Completed: <span id="comparisonCount">0</span>
+                <div style="display: flex; gap: 16px; justify-content: center;">
+                    <div class="progress-item">
+                        Comparisons Completed: <span id="comparisonCount">0</span>
+                    </div>
+                    <div class="progress-item">
+                        Remaining Comparisons: <span id="remainingComparisons">0</span>
+                    </div>
                 </div>
-                <div class="progress-item">
-                    Remaining Tasks: <span id="remainingTasks">0</span>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-label">Overall Progress: <span id="progressPercentage">0%</span></div>
+                    <div class="progress-bar-outer">
+                        <div id="progressBar" class="progress-bar-inner"></div>
+                    </div>
                 </div>
             </div>
 
@@ -253,7 +288,6 @@
         </div>
 
         <div id="tasksPreview" style="display:none;">
-            <h3>Tasks Preview</h3>
             <div class="scrollable-table">
                 <table id="tasksPreviewTable">
                     <thead>
@@ -268,7 +302,7 @@
                             <th>Dom Sexy Bits</th>
                             <th>Sub Sexy Bits</th>
                             <th>Toy Types</th>
-                            <th>KNK Preferences</th>
+                            <th>Kink Preferences</th>
                             <th>ELO Rating</th>
                             <th>Comparisons</th>
                             <th>Rank</th>
@@ -300,6 +334,9 @@
         let currentPair = null;
         let taskRatings = {};
         const K_FACTOR = 32;
+        const MIN_COMPARISONS_PER_TASK = 3; // Minimum number of comparisons for each task
+        let totalRequiredComparisons = 0;
+        let completedComparisons = 0;
 
         function initializeTaskComparison(uploadedTasks, existingRatings = []) {
             // Stratified sampling if ratings are provided
@@ -412,28 +449,84 @@
         }
 
         function selectNextPair() {
-            if (tasks.length < 2) {
+            if (tasks.length < 2 && areAllTasksComparedEnough()) {
                 showFinalRanking();
                 return;
             }
 
-            // Randomly select two different tasks
-            const indices = getRandomPairIndices();
-            currentPair = [tasks[indices[0]], tasks[indices[1]]];
+            // Calculate total required comparisons if not yet done
+            if (totalRequiredComparisons === 0) {
+                calculateTotalRequiredComparisons();
+            }
+
+            // Try to find tasks that haven't been compared enough
+            const underComparedTasks = tasks.filter(task =>
+                taskRatings[task[0]].comparisons < MIN_COMPARISONS_PER_TASK
+            );
+
+            // If we have under-compared tasks, prioritize those
+            if (underComparedTasks.length >= 2) {
+                const indices = getRandomPairIndices(underComparedTasks);
+                currentPair = [underComparedTasks[indices[0]], underComparedTasks[indices[1]]];
+            }
+            // If only one under-compared task, pair it with a random task
+            else if (underComparedTasks.length === 1) {
+                const otherTasks = tasks.filter(task => task[0] !== underComparedTasks[0][0]);
+                if (otherTasks.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * otherTasks.length);
+                    currentPair = [underComparedTasks[0], otherTasks[randomIndex]];
+                } else {
+                    // Should not happen, but just in case
+                    currentPair = [tasks[0], tasks[1]];
+                }
+            }
+            // Otherwise just pick random tasks
+            else {
+                const indices = getRandomPairIndices(tasks);
+                currentPair = [tasks[indices[0]], tasks[indices[1]]];
+            }
 
             document.getElementById('task1').textContent = currentPair[0][1];
             document.getElementById('task2').textContent = currentPair[1][1];
         }
 
-        function getRandomPairIndices() {
-            const index1 = Math.floor(Math.random() * tasks.length);
-            let index2 = Math.floor(Math.random() * tasks.length);
+        function getRandomPairIndices(taskArray) {
+            const index1 = Math.floor(Math.random() * taskArray.length);
+            let index2 = Math.floor(Math.random() * taskArray.length);
 
             while (index2 === index1) {
-                index2 = Math.floor(Math.random() * tasks.length);
+                index2 = Math.floor(Math.random() * taskArray.length);
             }
 
             return [index1, index2];
+        }
+
+        function areAllTasksComparedEnough() {
+            const allTaskIds = Object.keys(taskRatings);
+            return allTaskIds.every(taskId =>
+                taskRatings[taskId].comparisons >= MIN_COMPARISONS_PER_TASK
+            );
+        }
+
+        function calculateTotalRequiredComparisons() {
+            const uniqueTaskIds = new Set();
+
+            // Count unique tasks from both the visible tasks array and already rated tasks
+            tasks.forEach(task => uniqueTaskIds.add(task[0]));
+            Object.keys(taskRatings).forEach(taskId => uniqueTaskIds.add(taskId));
+
+            // Each task needs MIN_COMPARISONS_PER_TASK comparisons
+            totalRequiredComparisons = uniqueTaskIds.size * MIN_COMPARISONS_PER_TASK;
+
+            // Update completed comparisons count based on current state
+            completedComparisons = Object.values(taskRatings).reduce(
+                (sum, task) => sum + task.comparisons, 0
+            );
+
+            // Since each comparison updates 2 tasks, divide by 2
+            completedComparisons = Math.floor(completedComparisons / 2);
+
+            updateProgress();
         }
 
         function selectTask(taskNumber) {
@@ -442,10 +535,17 @@
 
             updateEloRatings(winnerId, loserId);
 
-            // Remove compared tasks from original tasks
-            tasks = tasks.filter(task =>
-                task[0] !== currentPair[0][0] && task[0] !== currentPair[1][0]
-            );
+            // Increment completed comparisons
+            completedComparisons++;
+
+            // Only remove tasks from the comparison pool if they've been compared enough
+            if (taskRatings[winnerId].comparisons >= MIN_COMPARISONS_PER_TASK &&
+                taskRatings[loserId].comparisons >= MIN_COMPARISONS_PER_TASK) {
+
+                tasks = tasks.filter(task =>
+                    task[0] !== currentPair[0][0] && task[0] !== currentPair[1][0]
+                );
+            }
 
             comparedPairs.push({
                 winner: winnerId,
@@ -482,13 +582,18 @@
             if (comparedPairs.length === 0) return;
 
             const lastComparison = comparedPairs.pop();
+            completedComparisons--;
 
             // Retrieve the full task details for both tasks in the last comparison
             const winnerTask = taskRatings[lastComparison.winner].fullTask;
             const loserTask = taskRatings[lastComparison.loser].fullTask;
 
-            // Add both tasks back to the tasks array
-            tasks.push(winnerTask, loserTask);
+            // Add both tasks back to the tasks array if they're not already there
+            const winnerExists = tasks.some(task => task[0] === winnerTask[0]);
+            const loserExists = tasks.some(task => task[0] === loserTask[0]);
+
+            if (!winnerExists) tasks.push(winnerTask);
+            if (!loserExists) tasks.push(loserTask);
 
             // Rollback ELO ratings (simplified approach)
             taskRatings[lastComparison.winner].rating -= K_FACTOR / 2;
@@ -518,9 +623,30 @@
             updateProgress();
         }
 
+        function resetProgress() {
+            totalRequiredComparisons = 0;
+            completedComparisons = 0;
+
+            // Update the progress bar
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressPercentage').textContent = '0%';
+        }
+
         function updateProgress() {
             document.getElementById('comparisonCount').textContent = comparedPairs.length;
-            document.getElementById('remainingTasks').textContent = tasks.length;
+
+            // Calculate remaining comparisons
+            const remainingComparisons = totalRequiredComparisons - completedComparisons;
+            document.getElementById('remainingComparisons').textContent = remainingComparisons > 0 ? remainingComparisons : 0;
+
+            // Calculate and update progress percentage
+            const progressPercentage = Math.min(
+                100,
+                Math.round((completedComparisons / totalRequiredComparisons) * 100)
+            );
+
+            document.getElementById('progressBar').style.width = `${progressPercentage}%`;
+            document.getElementById('progressPercentage').textContent = `${progressPercentage}%`;
         }
 
         function showFinalRanking() {
@@ -541,7 +667,7 @@
                     <th>Dom Sexy Bits</th>
                     <th>Sub Sexy Bits</th>
                     <th>Toy Types</th>
-                    <th>KNK Preferences</th>
+                    <th>Kink Preferences</th>
                     <th>Task Rank</th>
                     <th>Was Rated</th>
                 </tr>
@@ -591,7 +717,7 @@
                     'Dom Sexy Bits': cells[7].textContent,
                     'Sub Sexy Bits': cells[8].textContent,
                     'Toy Types': cells[9].textContent,
-                    'KNK Preferences': cells[10].textContent,
+                    'Kink Preferences': cells[10].textContent,
                     'ELO Rating': cells[11].textContent,
                     'Comparisons': cells[12].textContent,
                     'Was Rated': taskRatings[cells[0].textContent].wasRated
@@ -618,7 +744,9 @@
                 tasks: tasks,
                 comparedPairs: comparedPairs,
                 taskRatings: taskRatings,
-                currentPair: currentPair
+                currentPair: currentPair,
+                totalRequiredComparisons: totalRequiredComparisons,
+                completedComparisons: completedComparisons
             };
             localStorage.setItem('pairwiseComparison', JSON.stringify(saveData));
             alert('Progress saved successfully!');
@@ -634,7 +762,11 @@
                     taskRatings = parsedData.taskRatings;
                     currentPair = parsedData.currentPair;
 
-                    if (tasks.length >= 2) {
+                    // Load progress tracking data
+                    totalRequiredComparisons = parsedData.totalRequiredComparisons || 0;
+                    completedComparisons = parsedData.completedComparisons || 0;
+
+                    if (tasks.length >= 2 || !areAllTasksComparedEnough()) {
                         // Update tasks preview
                         updateTasksPreview(tasks);
 
@@ -644,6 +776,8 @@
                         document.getElementById('exportArea').style.display = 'block';
                         document.getElementById('tasksPreview').style.display = 'block';
                         updateProgress();
+                    } else {
+                        showFinalRanking();
                     }
                 } catch (error) {
                     console.error('Error loading saved progress:', error);
@@ -665,9 +799,12 @@
             currentPair = null;
             taskRatings = {};
 
+            // Reset progress tracking
+            resetProgress();
+
             // Clear UI elements
             document.getElementById('comparisonCount').textContent = '0';
-            document.getElementById('remainingTasks').textContent = '0';
+            document.getElementById('remainingComparisons').textContent = '0';
             document.getElementById('task1').textContent = '';
             document.getElementById('task2').textContent = '';
             document.getElementById('tasksPreviewBody').innerHTML = '';
@@ -686,21 +823,6 @@
             localStorage.removeItem('pairwiseComparison');
 
             alert('All ratings have been reset. Please upload tasks again.');
-        }
-
-        function clearLocalStorage() {
-            // Confirm before clearing
-            if (!confirm('Are you sure you want to clear ALL local storage for this app? This cannot be undone.')) {
-                return;
-            }
-
-            // Clear entire local storage
-            localStorage.clear();
-
-            // Reset the application state
-            resetRatings();
-
-            alert('Local storage has been completely cleared.');
         }
 
 
