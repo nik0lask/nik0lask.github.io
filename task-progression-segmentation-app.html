@@ -149,7 +149,7 @@
                 const data = XLSX.utils.sheet_to_json(worksheet);
 
                 // Filter and process data
-                const ratedTasks = data.filter(row => row['Was Rated'] === 'TRUE');
+                const ratedTasks = data.filter(row => row['Was Rated'] == 'TRUE');
 
                 // Calculate rank segments
                 const sortedByRank = ratedTasks.sort((a, b) => b.rank - a.rank);
