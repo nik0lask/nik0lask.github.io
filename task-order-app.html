@@ -652,31 +652,30 @@
         function showFinalRanking() {
             const rankedTasks = Object.values(taskRatings)
                 .sort((a, b) => b.rating - a.rating);
-
+        
             const table = document.getElementById('rankedTasksTable');
             table.innerHTML = `
                 <tr>
                     <th>Rank</th>
                     <th>Task ID</th>
                     <th>Description</th>
-                    <th>Min Duration</th>
-                    <th>Max Duration</th>
+                    <th>Min Duration (s)</th>
+                    <th>Max Duration (s)</th>
                     <th>With Partner</th>
                     <th>Finisher</th>
                     <th>Punishment</th>
                     <th>Dom Sexy Bits</th>
                     <th>Sub Sexy Bits</th>
                     <th>Toy Types</th>
-                    <th>Kink Preferences</th>
-                    <th>Task Rank</th>
+                    <th>KNK Preferences</th>
                     <th>Was Rated</th>
                 </tr>
             `;
-
+        
             rankedTasks.forEach((taskRating, index) => {
                 const row = table.insertRow();
                 const task = taskRating.fullTask;
-
+        
                 row.insertCell(0).textContent = index + 1;
                 row.insertCell(1).textContent = task[0];
                 row.insertCell(2).textContent = task[1];
@@ -689,12 +688,7 @@
                 row.insertCell(9).textContent = task[8];
                 row.insertCell(10).textContent = task[9];
                 row.insertCell(11).textContent = task[10];
-
-                // Task Rank (ELO Rating)
-                row.insertCell(12).textContent = Math.round(taskRating.rating);
-
-                // Was Rated
-                row.insertCell(13).textContent = taskRating.wasRated;
+                row.insertCell(12).textContent = taskRating.wasRated ? "TRUE" : "FALSE";
             });
         }
 
@@ -702,39 +696,38 @@
             // Collect data directly from the preview table
             const previewBody = document.getElementById('tasksPreviewBody');
             const rows = previewBody.querySelectorAll('tr');
-
+        
             const exportData = Array.from(rows).map(row => {
                 const cells = row.querySelectorAll('td');
                 return {
-                    'Rank': cells[13].textContent,
-                    'Task ID': cells[0].textContent,
-                    'Description': cells[1].textContent,
-                    'Min Duration (s)': cells[2].textContent,
-                    'Max Duration (s)': cells[3].textContent,
-                    'With Partner': cells[4].textContent,
-                    'Finisher': cells[5].textContent,
-                    'Punishment': cells[6].textContent,
-                    'Dom Sexy Bits': cells[7].textContent,
-                    'Sub Sexy Bits': cells[8].textContent,
-                    'Toy Types': cells[9].textContent,
-                    'Kink Preferences': cells[10].textContent,
-                    'ELO Rating': cells[11].textContent,
-                    'Comparisons': cells[12].textContent,
-                    'Was Rated': taskRatings[cells[0].textContent].wasRated
+                    'rank': cells[13].textContent,
+                    'taskId': cells[0].textContent,
+                    'description': cells[1].textContent,
+                    'minDurationInSeconds': cells[2].textContent,
+                    'maxDurationInSeconds': cells[3].textContent,
+                    'withPartner': cells[4].textContent,
+                    'finisher': cells[5].textContent,
+                    'punishment': cells[6].textContent,
+                    'domSxyBits': cells[7].textContent,
+                    'subSxyBits': cells[8].textContent,
+                    'toyTypes': cells[9].textContent,
+                    'knkPreferences': cells[10].textContent,
+                    // ELO rating and Comparisons are only used for processing, not for export output
+                    'Was Rated': taskRatings[cells[0].textContent].wasRated ? "TRUE" : "FALSE"
                 };
             });
-
+        
             // Get current date in YYYY-MM-DD format
             const currentDate = new Date().toISOString().split('T')[0];
-
+        
             // Create filename with current date
             const filename = `tasks_compared-${currentDate}.xlsx`;
-
+        
             // Create workbook and worksheet
             const worksheet = XLSX.utils.json_to_sheet(exportData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Ranked Tasks');
-
+        
             // Export the file
             XLSX.writeFile(workbook, filename, { compression: true });
         }
