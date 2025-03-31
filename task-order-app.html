@@ -391,6 +391,23 @@
 
             allTasks.forEach(task => {
                 const row = previewBody.insertRow();
+                const taskId = task[0];
+                const currentRank = rankMap.get(taskId) || 'N/A';
+                const previousRank = previousRanks[taskId];
+
+                // Add position change indicator if available
+                let positionChangeHTML = '';
+                if (previousRank !== undefined && currentRank !== 'N/A') {
+                    if (previousRank > currentRank) {
+                        // Task moved up
+                        positionChangeHTML = `<span style="color: green;">↑ ${previousRank - currentRank}</span>`;
+                        row.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+                    } else if (previousRank < currentRank) {
+                        // Task moved down
+                        positionChangeHTML = `<span style="color: red;">↓ ${currentRank - previousRank}</span>`;
+                        row.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+                    }
+                }
 
                 // Original task columns (0-10)
                 for (let i = 0; i < 11; i++) {
@@ -410,20 +427,29 @@
 
                 // Current Rank (index 13)
                 const rankCell = row.insertCell(13);
-                rankCell.textContent = rankMap.get(task[0]) || 'N/A';
+                rankCell.innerHTML = currentRank + ' ' + positionChangeHTML;
             });
 
-            // Optional: Sort rows by rank
+            // Sort rows by rank
             const sortedRows = Array.from(previewBody.querySelectorAll('tr'))
                 .sort((a, b) => {
                     const rankA = parseInt(a.cells[13].textContent);
                     const rankB = parseInt(b.cells[13].textContent);
-                    return rankA - rankB;
+                    return isNaN(rankA) ? 1 : isNaN(rankB) ? -1 : rankA - rankB;
                 });
 
             // Clear and re-add sorted rows
             previewBody.innerHTML = '';
             sortedRows.forEach(row => previewBody.appendChild(row));
+
+            // Reset row colors after a delay
+            setTimeout(() => {
+                const rows = previewBody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    row.style.transition = 'background-color 2s';
+                    row.style.backgroundColor = '';
+                });
+            }, 5000);
         }
 
         function stratifiedSampling(existingRatings, newTasks) {
@@ -448,6 +474,81 @@
             return sampledTasks;
         }
 
+        let comparisonQueue = [];
+
+        function generateComparisonQueue() {
+            comparisonQueue = [];
+
+            // Get under-compared tasks
+            const underComparedTaskIds = Object.keys(taskRatings)
+                .filter(taskId => taskRatings[taskId].comparisons < MIN_COMPARISONS_PER_TASK);
+
+            // If all tasks have minimum comparisons, compare closest ratings
+            if (underComparedTaskIds.length === 0) {
+                const sortedTaskIds = Object.keys(taskRatings)
+                    .sort((a, b) => taskRatings[a].rating - taskRatings[b].rating);
+
+                for (let i = 0; i < sortedTaskIds.length - 1; i++) {
+                    comparisonQueue.push([sortedTaskIds[i], sortedTaskIds[i + 1]]);
+                }
+            } else {
+                // Prioritize under-compared tasks
+                underComparedTaskIds.forEach(taskId => {
+                    const opponents = Object.keys(taskRatings)
+                        .filter(id => id !== taskId)
+                        .sort((a, b) =>
+                            Math.abs(taskRatings[a].rating - taskRatings[taskId].rating) -
+                            Math.abs(taskRatings[b].rating - taskRatings[taskId].rating)
+                        );
+
+                    // Add up to 3 closest rated opponents for each under-compared task
+                    for (let i = 0; i < Math.min(3, opponents.length); i++) {
+                        const pair = [taskId, opponents[i]].sort();
+                        const pairExists = comparedPairs.some(
+                            comp => (comp.winner === pair[0] && comp.loser === pair[1]) ||
+                                (comp.winner === pair[1] && comp.loser === pair[0])
+                        );
+
+                        if (!pairExists) {
+                            comparisonQueue.push(pair);
+                        }
+                    }
+                });
+            }
+
+            // Shuffle the queue
+            shuffleArray(comparisonQueue);
+
+            // Remove duplicates
+            comparisonQueue = Array.from(
+                new Set(comparisonQueue.map(JSON.stringify)),
+                JSON.parse
+            );
+        }
+
+        // Utility function to shuffle an array
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Add previous ranks tracking
+        let previousRanks = {};
+
+        function savePreviousRanks() {
+            // Calculate current rankings
+            const rankedTasks = Object.values(taskRatings)
+                .sort((a, b) => b.rating - a.rating);
+
+            // Save current rank for each task
+            rankedTasks.forEach((taskRating, index) => {
+                previousRanks[taskRating.fullTask[0]] = index;
+            });
+        }
+
         function selectNextPair() {
             if (tasks.length < 2 && areAllTasksComparedEnough()) {
                 showFinalRanking();
@@ -459,29 +560,42 @@
                 calculateTotalRequiredComparisons();
             }
 
-            // Try to find tasks that haven't been compared enough
+            // Check if we need to generate a new comparison queue
+            if (!comparisonQueue || comparisonQueue.length === 0) {
+                generateComparisonQueue();
+            }
+
+            // Get the next pair from the queue
+            if (comparisonQueue.length > 0) {
+                const nextPairIndices = comparisonQueue.shift();
+                const task1 = tasks.find(task => task[0] === nextPairIndices[0]);
+                const task2 = tasks.find(task => task[0] === nextPairIndices[1]);
+
+                if (task1 && task2) {
+                    currentPair = [task1, task2];
+                    document.getElementById('task1').textContent = currentPair[0][1];
+                    document.getElementById('task2').textContent = currentPair[1][1];
+                    return;
+                }
+            }
+
+            // Fallback to random selection if queue is empty or tasks not found
             const underComparedTasks = tasks.filter(task =>
                 taskRatings[task[0]].comparisons < MIN_COMPARISONS_PER_TASK
             );
 
-            // If we have under-compared tasks, prioritize those
             if (underComparedTasks.length >= 2) {
                 const indices = getRandomPairIndices(underComparedTasks);
                 currentPair = [underComparedTasks[indices[0]], underComparedTasks[indices[1]]];
-            }
-            // If only one under-compared task, pair it with a random task
-            else if (underComparedTasks.length === 1) {
+            } else if (underComparedTasks.length === 1) {
                 const otherTasks = tasks.filter(task => task[0] !== underComparedTasks[0][0]);
                 if (otherTasks.length > 0) {
                     const randomIndex = Math.floor(Math.random() * otherTasks.length);
                     currentPair = [underComparedTasks[0], otherTasks[randomIndex]];
                 } else {
-                    // Should not happen, but just in case
                     currentPair = [tasks[0], tasks[1]];
                 }
-            }
-            // Otherwise just pick random tasks
-            else {
+            } else {
                 const indices = getRandomPairIndices(tasks);
                 currentPair = [tasks[indices[0]], tasks[indices[1]]];
             }
@@ -533,31 +647,36 @@
             const winnerId = currentPair[taskNumber - 1][0];
             const loserId = currentPair[2 - taskNumber][0];
 
+            // Save previous ranks
+            savePreviousRanks();
+
             updateEloRatings(winnerId, loserId);
 
             // Increment completed comparisons
             completedComparisons++;
 
-            // Only remove tasks from the comparison pool if they've been compared enough
-            if (taskRatings[winnerId].comparisons >= MIN_COMPARISONS_PER_TASK &&
-                taskRatings[loserId].comparisons >= MIN_COMPARISONS_PER_TASK) {
-
-                tasks = tasks.filter(task =>
-                    task[0] !== currentPair[0][0] && task[0] !== currentPair[1][0]
-                );
-            }
-
+            // Track this comparison for undo
             comparedPairs.push({
                 winner: winnerId,
                 loser: loserId,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                previousWinnerRating: taskRatings[winnerId].rating - (K_FACTOR * (1 - calculateExpectedScore(winnerId, loserId))),
+                previousLoserRating: taskRatings[loserId].rating - (K_FACTOR * (0 - (1 - calculateExpectedScore(winnerId, loserId)))),
+                previousWinnerComparisons: taskRatings[winnerId].comparisons - 1,
+                previousLoserComparisons: taskRatings[loserId].comparisons - 1
             });
 
-            // Update tasks preview with all tasks that have been compared
+            // Update tasks preview with position change indicators
             updateTasksPreview(tasks);
 
             selectNextPair();
             updateProgress();
+        }
+
+        function calculateExpectedScore(player1Id, player2Id) {
+            const player1Rating = taskRatings[player1Id].rating;
+            const player2Rating = taskRatings[player2Id].rating;
+            return 1 / (1 + Math.pow(10, (player2Rating - player1Rating) / 400));
         }
 
         function updateEloRatings(winnerId, loserId) {
@@ -584,7 +703,7 @@
             const lastComparison = comparedPairs.pop();
             completedComparisons--;
 
-            // Retrieve the full task details for both tasks in the last comparison
+            // Retrieve the full task details
             const winnerTask = taskRatings[lastComparison.winner].fullTask;
             const loserTask = taskRatings[lastComparison.loser].fullTask;
 
@@ -595,12 +714,12 @@
             if (!winnerExists) tasks.push(winnerTask);
             if (!loserExists) tasks.push(loserTask);
 
-            // Rollback ELO ratings (simplified approach)
-            taskRatings[lastComparison.winner].rating -= K_FACTOR / 2;
-            taskRatings[lastComparison.loser].rating += K_FACTOR / 2;
+            // Reset to exact previous ratings from stored values
+            taskRatings[lastComparison.winner].rating = lastComparison.previousWinnerRating;
+            taskRatings[lastComparison.loser].rating = lastComparison.previousLoserRating;
 
-            taskRatings[lastComparison.winner].comparisons--;
-            taskRatings[lastComparison.loser].comparisons--;
+            taskRatings[lastComparison.winner].comparisons = lastComparison.previousWinnerComparisons;
+            taskRatings[lastComparison.loser].comparisons = lastComparison.previousLoserComparisons;
 
             // Reset rated status if no more comparisons
             if (taskRatings[lastComparison.winner].comparisons === 0) {
@@ -613,11 +732,11 @@
             // Restore the previous pair for comparison
             currentPair = [winnerTask, loserTask];
 
-            // Update the task cards with the previous tasks
+            // Update the task cards
             document.getElementById('task1').textContent = currentPair[0][1];
             document.getElementById('task2').textContent = currentPair[1][1];
 
-            // Update tasks preview with all tasks that have been compared
+            // Update tasks preview
             updateTasksPreview(tasks);
 
             updateProgress();
@@ -652,7 +771,7 @@
         function showFinalRanking() {
             const rankedTasks = Object.values(taskRatings)
                 .sort((a, b) => b.rating - a.rating);
-        
+
             const table = document.getElementById('rankedTasksTable');
             table.innerHTML = `
                 <tr>
@@ -671,11 +790,11 @@
                     <th>Was Rated</th>
                 </tr>
             `;
-        
+
             rankedTasks.forEach((taskRating, index) => {
                 const row = table.insertRow();
                 const task = taskRating.fullTask;
-        
+
                 row.insertCell(0).textContent = index + 1;
                 row.insertCell(1).textContent = task[0];
                 row.insertCell(2).textContent = task[1];
@@ -693,41 +812,43 @@
         }
 
         function exportRankedTasks() {
-            // Collect data directly from the preview table
-            const previewBody = document.getElementById('tasksPreviewBody');
-            const rows = previewBody.querySelectorAll('tr');
-        
-            const exportData = Array.from(rows).map(row => {
-                const cells = row.querySelectorAll('td');
+            // Get ranked tasks directly from taskRatings
+            const rankedTasks = Object.values(taskRatings)
+                .sort((a, b) => b.rating - a.rating);
+
+            const exportData = rankedTasks.map((taskRating, index) => {
+                const task = taskRating.fullTask;
+
                 return {
-                    'rank': cells[13].textContent,
-                    'taskId': cells[0].textContent,
-                    'description': cells[1].textContent,
-                    'minDurationInSeconds': cells[2].textContent,
-                    'maxDurationInSeconds': cells[3].textContent,
-                    'withPartner': cells[4].textContent,
-                    'finisher': cells[5].textContent,
-                    'punishment': cells[6].textContent,
-                    'domSexyBits': cells[7].textContent,
-                    'subSexyBits': cells[8].textContent,
-                    'toyTypes': cells[9].textContent,
-                    'kinkPreferences': cells[10].textContent,
-                    // ELO rating and Comparisons are only used for processing, not for export output
-                    'Was Rated': taskRatings[cells[0].textContent].wasRated ? "TRUE" : "FALSE"
+                    'rank': index + 1,
+                    'taskId': task[0],
+                    'description': task[1],
+                    'minDurationInSeconds': task[2],
+                    'maxDurationInSeconds': task[3],
+                    'withPartner': task[4],
+                    'finisher': task[5],
+                    'punishment': task[6],
+                    'domSxyBits': task[7],
+                    'subSxyBits': task[8],
+                    'toyTypes': task[9],
+                    'knkPreferences': task[10],
+                    'ELO': Math.round(taskRating.rating), // ELO rating for processing
+                    'Comparisons': taskRating.comparisons, // Comparison count for processing
+                    'Was Rated': taskRating.wasRated ? "TRUE" : "FALSE"
                 };
             });
-        
+
             // Get current date in YYYY-MM-DD format
             const currentDate = new Date().toISOString().split('T')[0];
-        
+
             // Create filename with current date
             const filename = `tasks_compared-${currentDate}.xlsx`;
-        
+
             // Create workbook and worksheet
             const worksheet = XLSX.utils.json_to_sheet(exportData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Ranked Tasks');
-        
+
             // Export the file
             XLSX.writeFile(workbook, filename, { compression: true });
         }
