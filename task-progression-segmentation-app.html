@@ -110,18 +110,18 @@
     <table id="resultTable">
         <thead>
             <tr>
-                <th>Task ID</th>
-                <th>Description</th>
-                <th>Min Duration (s)</th>
-                <th>Max Duration (s)</th>
-                <th>With Partner</th>
-                <th>Finisher</th>
-                <th>Punishment</th>
-                <th>Dom Sexy Bits</th>
-                <th>Sub Sexy Bits</th>
-                <th>Toy Types</th>
-                <th>Kink Preferences</th>
-                <th>Rank Segment</th>
+                <th>taskId</th>
+                <th>description</th>
+                <th>minDurationInSeconds</th>
+                <th>maxDurationInSeconds</th>
+                <th>withPartner</th>
+                <th>finisher</th>
+                <th>punishment</th>
+                <th>domSexyBits</th>
+                <th>subSexyBits</th>
+                <th>toyTypes</th>
+                <th>kinkPreferences</th>
+                <th>rankSegment</th>
             </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -149,7 +149,7 @@
                 const data = XLSX.utils.sheet_to_json(worksheet);
 
                 // Filter and process data
-                const ratedTasks = data.filter(row => row['Was Rated'] == 'TRUE');
+                const ratedTasks = data.filter(row => row['Was Rated'] === 'TRUE');
 
                 // Calculate rank segments
                 const sortedByRank = ratedTasks.sort((a, b) => b.rank - a.rank);
