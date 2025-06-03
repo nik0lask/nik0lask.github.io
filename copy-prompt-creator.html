@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,12 +13,14 @@
             padding: 20px;
             line-height: 1.6;
         }
+
         .input-section {
             background-color: #f5f5f5;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
+
         textarea {
             width: 100%;
             padding: 10px;
@@ -27,6 +30,7 @@
             margin-bottom: 10px;
             font-family: inherit;
         }
+
         input[type="text"] {
             width: 100%;
             padding: 10px;
@@ -35,6 +39,7 @@
             margin-bottom: 10px;
             font-family: inherit;
         }
+
         button {
             padding: 10px 15px;
             background-color: #4CAF50;
@@ -45,13 +50,16 @@
             margin-right: 10px;
             margin-bottom: 10px;
         }
+
         button:hover {
             background-color: #45a049;
         }
+
         button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
+
         .card-container {
             border: 1px solid #ddd;
             padding: 20px;
@@ -62,58 +70,143 @@
             flex-direction: column;
             justify-content: space-between;
         }
+
         .card-text {
             font-size: 18px;
             margin-bottom: 20px;
             white-space: pre-wrap;
         }
+
         .navigation {
             display: flex;
             justify-content: space-between;
             margin-top: 20px;
         }
+
         .used {
             background-color: #f0f0f0;
             border-left: 5px solid #aaaaaa;
             color: #888888;
             opacity: 0.8;
         }
+
         .status-info {
             margin-top: 20px;
             font-style: italic;
             color: #666;
         }
+
         .button-section {
             margin-top: 10px;
         }
-        .copy-success {
-            color: #4CAF50;
-            margin-left: 10px;
+
+        .modal {
             display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .modal p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .modal button {
+            padding: 12px 20px;
+            font-size: 16px;
+        }
+
+        .button-primary {
+            background-color: #4CAF50;
+        }
+
+        .button-secondary {
+            background-color: #2196F3;
+        }
+
+        .copy-success {
+            display: none;
+            color: green;
+            margin-left: 10px;
+        }
+
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 3000;
+            /* Ensure it appears above modals */
+            font-size: 16px;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .notification.show {
+            opacity: 1;
         }
     </style>
 </head>
+
 <body>
-    <h1>Card Creator App</h1>
-    
+
+    <div id="saveNotification" class="notification">Data saved successfully!</div>
+
+    <h1>Copy Prompt Creator</h1>
+
     <div class="input-section">
         <h2>Input Settings</h2>
-        
+
         <label for="preText">Pre-Text (added before each line):</label>
         <input type="text" id="preText" placeholder="Enter text to add before each line">
-        
+
         <label for="content">Content (one item per line):</label>
         <textarea id="content" rows="8" placeholder="Enter your content here, one item per line"></textarea>
-        
+
         <label for="postText">Post-Text (added after each line):</label>
         <input type="text" id="postText" placeholder="Enter text to add after each line">
-        
+
         <label for="linesPerCard">Lines per card:</label>
         <input type="number" id="linesPerCard" min="1" value="1" placeholder="Number of lines to include in each card">
-        
+
         <label for="separatorText">Separator text (between lines in same card):</label>
         <input type="text" id="separatorText" placeholder="Text to put between lines (e.g., newline, space, comma)">
-        
+
         <div class="button-section">
             <button id="generateBtn">Generate Cards</button>
             <button id="saveBtn">Save State</button>
@@ -121,7 +214,7 @@
             <button id="clearBtn">Clear Storage</button>
         </div>
     </div>
-    
+
     <div id="cardSection" style="display: none;">
         <h2>Cards</h2>
         <div class="card-container" id="cardContainer">
@@ -129,15 +222,27 @@
             <button id="copyBtn">Copy Text</button>
             <span class="copy-success" id="copySuccess">Copied!</span>
         </div>
-        
+
         <div class="navigation">
             <button id="prevBtn" disabled>Previous Card</button>
             <span id="cardCounter">Card 1 of 0</span>
             <button id="nextBtn" disabled>Next Card</button>
         </div>
-        
+
         <div class="status-info">
             <p id="statusInfo"></p>
+        </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div id="welcomeModal" class="modal">
+        <div class="modal-content">
+            <h2>Welcome Back!</h2>
+            <p>We found some saved data from your previous session. Would you like to continue where you left off?</p>
+            <div class="modal-buttons">
+                <button id="loadExistingBtn" class="button-primary">Load Previous Session</button>
+                <button id="startNewBtn" class="button-secondary">Start Fresh</button>
+            </div>
         </div>
     </div>
 
@@ -148,6 +253,9 @@
         let cardStates = []; // false = unused, true = used/copied
 
         // DOM elements
+        const welcomeModal = document.getElementById('welcomeModal');
+        const loadExistingBtn = document.getElementById('loadExistingBtn');
+        const startNewBtn = document.getElementById('startNewBtn');
         const preTextInput = document.getElementById('preText');
         const contentTextarea = document.getElementById('content');
         const postTextInput = document.getElementById('postText');
@@ -167,74 +275,99 @@
         const cardCounter = document.getElementById('cardCounter');
         const statusInfo = document.getElementById('statusInfo');
 
-        // Event listeners
-        generateBtn.addEventListener('click', generateCards);
-        copyBtn.addEventListener('click', copyCardText);
-        prevBtn.addEventListener('click', showPreviousCard);
-        nextBtn.addEventListener('click', showNextCard);
-        saveBtn.addEventListener('click', saveToLocalStorage);
-        loadBtn.addEventListener('click', loadFromLocalStorage);
-        clearBtn.addEventListener('click', clearLocalStorage);
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            showWelcomeModal();
+
+            // Event listeners
+            loadExistingBtn.addEventListener('click', loadExistingSession);
+            startNewBtn.addEventListener('click', startNewSession);
+            generateBtn.addEventListener('click', generateCards);
+            copyBtn.addEventListener('click', copyCardText);
+            prevBtn.addEventListener('click', showPreviousCard);
+            nextBtn.addEventListener('click', showNextCard);
+            saveBtn.addEventListener('click', saveToLocalStorage);
+            loadBtn.addEventListener('click', loadFromLocalStorage);
+            clearBtn.addEventListener('click', clearLocalStorage);
+        });
 
         // Functions
+        function showWelcomeModal() {
+            const savedData = localStorage.getItem('cardCreatorData');
+            if (savedData) {
+                welcomeModal.style.display = 'block';
+            }
+        }
+
+        function loadExistingSession() {
+            welcomeModal.style.display = 'none';
+            loadFromLocalStorage();
+        }
+
+        function startNewSession() {
+            welcomeModal.style.display = 'none';
+            // Clear any existing data but don't remove from storage yet
+            // User can still manually load if they change their mind
+        }
+
         function generateCards() {
             const preText = preTextInput.value;
             const content = contentTextarea.value.trim();
             const postText = postTextInput.value;
             const linesPerCard = parseInt(linesPerCardInput.value) || 1;
             const separatorText = separatorTextInput.value || '\n';
-            
+
             if (!content) {
                 alert('Please enter some content.');
                 return;
             }
-            
+
             const lines = content.split('\n').filter(line => line.trim() !== '');
-            
+
             if (lines.length === 0) {
                 alert('Please enter at least one line of content.');
                 return;
             }
-            
+
             // Group lines into cards
             cardContents = [];
             for (let i = 0; i < lines.length; i += linesPerCard) {
                 const cardLines = lines.slice(i, i + linesPerCard);
                 const combinedContent = cardLines.join(separatorText);
-                
+
                 cardContents.push({
                     original: cardLines,
                     formatted: `${preText}${combinedContent}${postText}`
                 });
             }
-            
+
             cardStates = Array(cardContents.length).fill(false);
             currentCardIndex = 0;
-            
+
             cardSection.style.display = 'block';
             updateCardDisplay();
         }
 
         function updateCardDisplay() {
             if (cardContents.length === 0) return;
-            
+
             const currentCard = cardContents[currentCardIndex];
             cardText.textContent = currentCard.formatted;
-            
+
             // Update used/unused status
             if (cardStates[currentCardIndex]) {
                 cardContainer.classList.add('used');
             } else {
                 cardContainer.classList.remove('used');
             }
-            
+
             // Update counter
             cardCounter.textContent = `Card ${currentCardIndex + 1} of ${cardContents.length}`;
-            
+
             // Update navigation buttons
             prevBtn.disabled = currentCardIndex === 0;
             nextBtn.disabled = currentCardIndex === cardContents.length - 1;
-            
+
             // Update status info
             const usedCount = cardStates.filter(state => state).length;
             statusInfo.textContent = `${usedCount} of ${cardContents.length} cards used`;
@@ -242,34 +375,34 @@
 
         function copyCardText() {
             const textToCopy = cardText.textContent;
-            
+
             navigator.clipboard.writeText(textToCopy)
                 .then(() => {
                     // Mark card as used
                     cardStates[currentCardIndex] = true;
                     cardContainer.classList.add('used');
-                    
+
                     // Show copy success message
                     copySuccess.style.display = 'inline';
                     setTimeout(() => {
                         copySuccess.style.display = 'none';
                     }, 2000);
-                    
+
                     // Automatically save to local storage
-                    saveToLocalStorage(true);
-                    
+                    saveToLocalStorage(); // Will trigger notification
+
                     // Move to next card if available
                     if (currentCardIndex < cardContents.length - 1) {
                         setTimeout(() => {
                             showNextCard();
                         }, 1000);
                     }
-                    
+
                     updateCardDisplay();
                 })
                 .catch(err => {
                     console.error('Failed to copy text: ', err);
-                    alert('Failed to copy text. Please try again.');
+                    showNotification('Failed to copy text.', false);
                 });
         }
 
@@ -289,10 +422,12 @@
 
         function saveToLocalStorage(silent = false) {
             if (cardContents.length === 0) {
-                if (!silent) alert('No cards to save.');
+                if (!silent) {
+                    showNotification('No cards to save.', false);
+                }
                 return;
             }
-            
+
             const dataToSave = {
                 preText: preTextInput.value,
                 content: contentTextarea.value,
@@ -302,38 +437,64 @@
                 currentCardIndex: currentCardIndex,
                 cardStates: cardStates
             };
-            
+
             localStorage.setItem('cardCreatorData', JSON.stringify(dataToSave));
-            if (!silent) alert('App state saved successfully!');
+
+            if (!silent) {
+                showNotification('Data saved successfully!');
+            }
+        }
+
+        function showNotification(message, isSuccess = true) {
+            const notification = document.getElementById('saveNotification');
+            if (!notification) {
+                console.error('Notification element not found!');
+                return;
+            }
+
+            notification.textContent = message;
+            notification.style.backgroundColor = isSuccess ? '#4CAF50' : '#f44336';
+
+            // Show notification
+            notification.classList.add('show');
+
+            // Hide after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
         }
 
         function loadFromLocalStorage() {
             const savedData = localStorage.getItem('cardCreatorData');
-            
+
             if (!savedData) {
                 alert('No saved data found.');
                 return;
             }
-            
+
             try {
                 const data = JSON.parse(savedData);
-                
+
                 // Restore input values
                 preTextInput.value = data.preText || '';
                 contentTextarea.value = data.content || '';
                 postTextInput.value = data.postText || '';
                 linesPerCardInput.value = data.linesPerCard || '1';
                 separatorTextInput.value = data.separatorText || '';
-                
+
                 // Generate cards
                 generateCards();
-                
+
                 // Restore state
                 currentCardIndex = data.currentCardIndex || 0;
                 cardStates = data.cardStates || Array(cardContents.length).fill(false);
-                
+
                 updateCardDisplay();
-                alert('Saved state loaded successfully!');
+
+                // Only show alert if called manually (not from welcome modal)
+                if (welcomeModal.style.display === 'none' || !welcomeModal.style.display) {
+                    alert('Saved state loaded successfully!');
+                }
             } catch (error) {
                 console.error('Error loading saved data:', error);
                 alert('Error loading saved data. Please try again.');
@@ -346,15 +507,7 @@
                 alert('Storage cleared successfully!');
             }
         }
-
-        // Check for saved data on load
-        document.addEventListener('DOMContentLoaded', () => {
-            if (localStorage.getItem('cardCreatorData')) {
-                loadBtn.disabled = false;
-            } else {
-                loadBtn.disabled = true;
-            }
-        });
     </script>
 </body>
+
 </html>
