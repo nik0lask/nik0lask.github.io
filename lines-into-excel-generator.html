@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,18 +14,18 @@
             padding: 20px;
             line-height: 1.6;
         }
-        
+
         h1 {
             color: #333;
             text-align: center;
         }
-        
+
         .container {
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
-        
+
         textarea {
             width: 100%;
             min-height: 200px;
@@ -34,7 +35,7 @@
             font-family: monospace;
             resize: vertical;
         }
-        
+
         button {
             background-color: #4CAF50;
             color: white;
@@ -49,36 +50,37 @@
             border-radius: 4px;
             transition: background-color 0.3s;
         }
-        
+
         button:hover {
             background-color: #45a049;
         }
-        
+
         #preview {
             margin-top: 20px;
             overflow-x: auto;
         }
-        
+
         table {
             border-collapse: collapse;
             width: 100%;
         }
-        
-        th, td {
+
+        th,
+        td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
         }
-        
+
         th {
             background-color: #f2f2f2;
             font-weight: bold;
         }
-        
+
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
-        
+
         .instructions {
             background-color: #f8f9fa;
             padding: 15px;
@@ -86,35 +88,70 @@
             border-left: 4px solid #4CAF50;
             margin-bottom: 20px;
         }
-        
+
+        .instructions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding-bottom: 5px;
+        }
+
+        .instructions-content {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            max-height: 500px;
+            /* Adjust based on content height */
+            opacity: 1;
+        }
+
+        .instructions-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        .instructions .toggle-btn {
+            background: none;
+            border: none;
+            color: #333;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .instructions .toggle-btn:hover {
+            background-color: #ddd;
+        }
+
         .controls {
             display: flex;
             align-items: center;
             gap: 15px;
             margin-bottom: 15px;
         }
-        
+
         .controls label {
             font-weight: bold;
         }
-        
+
         .controls input {
             width: 60px;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
         }
-        
+
         .duplicate {
             background-color: #ffdddd;
             position: relative;
         }
-        
+
         .duplicate::after {
             content: " ⚠️";
             color: #ff0000;
         }
-        
+
         .summary {
             margin-bottom: 20px;
             padding: 10px;
@@ -122,18 +159,18 @@
             border-radius: 4px;
             border-left: 4px solid #ff9800;
         }
-        
+
         .summary-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
         }
-        
+
         .summary-content {
             margin-top: 10px;
         }
-        
+
         .toggle-btn {
             background: none;
             border: none;
@@ -143,11 +180,11 @@
             padding: 5px;
             border-radius: 3px;
         }
-        
+
         .toggle-btn:hover {
             background-color: #ddd;
         }
-        
+
         .column-selector {
             display: flex;
             flex-wrap: wrap;
@@ -158,39 +195,31 @@
             background-color: #f8f8f8;
             border-radius: 4px;
         }
-        
+
         .column-selector label {
             display: flex;
             align-items: center;
             margin-right: 10px;
         }
-        
+
         .column-selector input {
             margin-right: 5px;
         }
-        
+
         .storage-controls {
             display: flex;
             gap: 10px;
             margin-top: 10px;
         }
-        
+
         .clear-btn {
             background-color: #f44336;
         }
-        
+
         .clear-btn:hover {
             background-color: #d32f2f;
         }
-        
-        .storage-status {
-            padding: 8px 12px;
-            background-color: #e8f5e9;
-            border-radius: 4px;
-            margin-top: 10px;
-            display: none;
-        }
-        
+
         .row-count {
             margin-bottom: 10px;
             padding: 8px 12px;
@@ -199,24 +228,145 @@
             border-left: 4px solid #2196f3;
             display: inline-block;
         }
+
+        .notification {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            /* Increased shadow */
+            opacity: 1;
+            transition: opacity 2s ease-in-out;
+            z-index: 1000;
+        }
+
+        .notification.fade-out {
+            opacity: 0;
+        }
+
+        .storage-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            /* Increased shadow */
+            opacity: 1;
+            transition: opacity 2s ease-in-out;
+            z-index: 1000;
+        }
+
+        .storage-notification.fade-out {
+            opacity: 0;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            /* Semi-transparent black */
+            z-index: 2000;
+            display: none;
+            /* Hidden by default */
+        }
+
+        .popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 2100;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            display: none;
+            /* Hidden by default */
+        }
+
+        .popup h3 {
+            margin: 0 0 15px;
+            color: #333;
+        }
+
+        .popup p {
+            margin: 0 0 20px;
+            color: #555;
+        }
+
+        .popup-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .popup button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.3s;
+        }
+
+        .popup .load-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .popup .load-btn:hover {
+            background-color: #45a049;
+        }
+
+        .popup .new-session-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .popup .new-session-btn:hover {
+            background-color: #d32f2f;
+        }
     </style>
 </head>
+
 <body>
-    <h1>Text to Excel Converter</h1>
-    
+    <h1>Lines Into Excel Generator</h1>
+
     <div class="instructions">
-        <h3>Instructions:</h3>
-        <p>Enter text where:</p>
-        <ul>
-            <li>The first N lines become column headers (where N is the number of columns)</li>
-            <li>Every subsequent group of N lines becomes a row of data</li>
-            <li>The data will be organized in columns based on the headers</li>
-            <li>Select which columns to check for duplicates</li>
-            <li>Duplicate values in columns will be highlighted (except when they match the column header)</li>
-        </ul>
-        <p><strong>Note:</strong> Your input text will be automatically saved when you preview the table and restored when you reload the page.</p>
+        <div class="instructions-header">
+            <h3>Instructions</h3>
+            <button class="toggle-btn" id="instructionsToggle">−</button>
+        </div>
+        <div class="instructions-content" id="instructionsContent">
+            <p>Enter text where:</p>
+            <ul>
+                <li>The first N lines become column headers (where N is the number of columns)</li>
+                <li>Every subsequent group of N lines becomes a row of data</li>
+                <li>The data will be organized in columns based on the headers</li>
+                <li>Select which columns to check for duplicates</li>
+                <li>Duplicate values in columns will be highlighted (except when they match the column header)</li>
+                <li>Entries that match their column header exactly will be skipped (replaced with empty cells)</li>
+            </ul>
+            <p><strong>Note:</strong> Your input text will be automatically saved when you preview the table and
+                restored when you reload the page.</p>
+        </div>
     </div>
-    
+
     <div class="container">
         <div class="controls">
             <label for="columnCount">Number of Columns:</label>
@@ -225,9 +375,7 @@
                 <button id="clearStorageBtn" class="clear-btn" onclick="clearStorage()">Clear Saved Data</button>
             </div>
         </div>
-        
-        <div id="storageStatus" class="storage-status"></div>
-        
+
         <textarea id="inputText" placeholder="Paste your text here..."></textarea>
         <div id="columnSelector" style="display: none;"></div>
         <div>
@@ -239,103 +387,208 @@
     </div>
 
     <script>
+
+        let previousRowCount = 0;
+
+        function showDataLoadPopup() {
+            return new Promise((resolve) => {
+                // Create overlay
+                const overlay = document.createElement('div');
+                overlay.className = 'overlay';
+
+                // Create popup
+                const popup = document.createElement('div');
+                popup.className = 'popup';
+                popup.innerHTML = `
+            <h3>Saved Data Found</h3>
+            <p>Would you like to load your saved data or start a new session?</p>
+            <div class="popup-buttons">
+                <button class="load-btn">Load Saved Data</button>
+                <button class="new-session-btn">Start New Session</button>
+            </div>
+        `;
+
+                // Append to body
+                document.body.appendChild(overlay);
+                document.body.appendChild(popup);
+
+                // Show popup and overlay
+                overlay.style.display = 'block';
+                popup.style.display = 'block';
+
+                // Handle button clicks
+                const loadBtn = popup.querySelector('.load-btn');
+                const newSessionBtn = popup.querySelector('.new-session-btn');
+
+                loadBtn.addEventListener('click', () => {
+                    overlay.remove();
+                    popup.remove();
+                    resolve(true); // Load saved data
+                });
+
+                newSessionBtn.addEventListener('click', () => {
+                    overlay.remove();
+                    popup.remove();
+                    resolve(false); // Start new session
+                });
+            });
+        }
+
+        function showNotification(message) {
+            // Remove any existing row count notification
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            // Create new notification
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // Fade out after 4 seconds
+            setTimeout(() => {
+                notification.classList.add('fade-out');
+                // Remove after fade-out transition
+                setTimeout(() => {
+                    notification.remove();
+                }, 2000); // Matches 2-second CSS transition
+            }, 4000); // Display for 4 seconds
+        }
+
+        function showStorageNotification(message) {
+            // Remove any existing storage notification
+            const existingNotification = document.querySelector('.storage-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            // Create new storage notification
+            const notification = document.createElement('div');
+            notification.className = 'storage-notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // Fade out after 4 seconds
+            setTimeout(() => {
+                notification.classList.add('fade-out');
+                // Remove after fade-out transition
+                setTimeout(() => {
+                    notification.remove();
+                }, 2000); // Matches 2-second CSS transition
+            }, 4000); // Display for 4 seconds
+        }
+
+
         // Load saved data when the page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            loadFromLocalStorage();
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Check if there is saved data
+            const hasSavedData = localStorage.getItem('textToExcelInput') || localStorage.getItem('textToExcelColumns');
+
+            if (hasSavedData) {
+                const loadData = await showDataLoadPopup();
+                if (loadData) {
+                    // Load saved data
+                    loadFromLocalStorage();
+                } else {
+                    // Start new session: clear storage and reset
+                    clearStorage();
+                }
+            }
+
+            // Add click event for instructions toggle
+            const instructionsHeader = document.querySelector('.instructions-header');
+            if (instructionsHeader) {
+                instructionsHeader.addEventListener('click', toggleInstructions);
+            }
         });
-        
+
         function saveToLocalStorage() {
             const inputText = document.getElementById('inputText').value;
             const columnCount = document.getElementById('columnCount').value;
-            
+
             // Save to localStorage
             localStorage.setItem('textToExcelInput', inputText);
             localStorage.setItem('textToExcelColumns', columnCount);
-            
+
             // Show status message
             showStorageStatus('Data saved successfully!');
         }
-        
+
         function loadFromLocalStorage() {
             const inputText = localStorage.getItem('textToExcelInput');
             const columnCount = localStorage.getItem('textToExcelColumns');
-            
+
             if (inputText) {
                 document.getElementById('inputText').value = inputText;
             }
-            
+
             if (columnCount) {
                 document.getElementById('columnCount').value = columnCount;
             }
-            
+
             // If we have saved data, process it automatically
             if (inputText && inputText.trim() !== '') {
                 showStorageStatus('Saved data loaded successfully!');
                 processText(false); // Process without saving again
             }
         }
-        
+
         function clearStorage() {
             localStorage.removeItem('textToExcelInput');
             localStorage.removeItem('textToExcelColumns');
-            
+
             // Clear the input field and reset column count
             document.getElementById('inputText').value = '';
             document.getElementById('columnCount').value = '4';
-            
+
             // Clear the preview area
             document.getElementById('preview').innerHTML = '';
             document.getElementById('columnSelector').style.display = 'none';
             document.getElementById('duplicateSummary').style.display = 'none';
-            
+
             showStorageStatus('Saved data cleared successfully!');
         }
-        
+
         function showStorageStatus(message) {
-            const statusElement = document.getElementById('storageStatus');
-            statusElement.textContent = message;
-            statusElement.style.display = 'block';
-            
-            // Hide the message after 3 seconds
-            setTimeout(() => {
-                statusElement.style.display = 'none';
-            }, 3000);
+            showStorageNotification(message);
         }
-        
+
         function processText(shouldSave = true) {
             const inputText = document.getElementById('inputText').value.trim();
             const columnCount = parseInt(document.getElementById('columnCount').value);
-            
+
             if (shouldSave) {
                 saveToLocalStorage();
             }
-            
+
             if (isNaN(columnCount) || columnCount < 1) {
                 alert('Please enter a valid number of columns (minimum 1).');
                 return null;
             }
-            
+
             const lines = inputText.split('\n').map(line => line.trim()).filter(line => line);
-            
+
             // Need at least columnCount lines for headers and at least one row of data
             if (lines.length < columnCount * 2) {
                 alert(`Please enter at least ${columnCount * 2} lines of text (${columnCount} for headers and ${columnCount} for one row of data).`);
                 return null;
             }
-            
+
             // Extract headers (first columnCount lines)
             const headers = lines.slice(0, columnCount);
-            
+
             // Process the data rows
             const data = [];
             const remainingLines = lines.slice(columnCount);
-            
+
             // Process each group of columnCount lines as a row
             for (let i = 0; i < remainingLines.length; i += columnCount) {
                 if (i + columnCount - 1 < remainingLines.length) {
                     const row = {};
                     let hasNonHeaderValue = false;
-                    
+
                     headers.forEach((header, index) => {
                         const value = remainingLines[i + index];
                         // Skip values that are the same as their column header
@@ -346,19 +599,33 @@
                             row[header] = ''; // Use empty string for skipped values
                         }
                     });
-                    
+
                     // Only add the row if at least one value is not the same as its header
                     if (hasNonHeaderValue) {
                         data.push(row);
                     }
                 }
             }
-            
+
             if (data.length === 0) {
                 alert('Could not create any complete rows. Please check your input.');
                 return null;
             }
-            
+
+            // Calculate new rows added
+            const currentRowCount = data.length;
+            const newRows = currentRowCount - previousRowCount;
+
+            // Show notification if there are new rows
+            if (newRows > 0) {
+                showNotification(`${newRows} new row${newRows === 1 ? '' : 's'} added`);
+            } else if (newRows < 0) {
+                showNotification(`${Math.abs(newRows)} row${Math.abs(newRows) === 1 ? '' : 's'} removed`);
+            }
+
+            // Update previous row count
+            previousRowCount = currentRowCount;
+
             // Update instructions to include the new functionality
             const instructions = document.querySelector('.instructions ul');
             if (instructions && !instructions.querySelector('li:nth-child(6)')) {
@@ -366,26 +633,26 @@
                 newListItem.textContent = 'Entries that match their column header exactly will be skipped (replaced with empty cells)';
                 instructions.appendChild(newListItem);
             }
-            
+
             // First create/update column selector checkboxes
             createColumnSelector(headers);
-            
+
             // Then analyze selected columns for duplicates
             updateDuplicatesAndPreview(headers, data);
-            
+
             return { headers, data };
         }
-        
+
         function createColumnSelector(headers) {
             const selectorDiv = document.getElementById('columnSelector');
             selectorDiv.style.display = 'block';
             selectorDiv.innerHTML = '<h4>Select columns to check for duplicates:</h4><div class="column-selector">';
-            
+
             headers.forEach(header => {
                 // Check if checkbox already exists to preserve state
                 const existingCheckbox = document.getElementById(`check-${header}`);
                 const isChecked = existingCheckbox ? existingCheckbox.checked : true;
-                
+
                 selectorDiv.innerHTML += `
                     <label>
                         <input type="checkbox" id="check-${header}" name="column-check" value="${header}" ${isChecked ? 'checked' : ''} onchange="updateDuplicatesAndPreview()">
@@ -393,27 +660,27 @@
                     </label>
                 `;
             });
-            
+
             selectorDiv.innerHTML += '</div>';
         }
-        
+
         function updateDuplicatesAndPreview() {
             // Get text data that was already processed
             const inputText = document.getElementById('inputText').value.trim();
             const columnCount = parseInt(document.getElementById('columnCount').value);
-            
+
             const lines = inputText.split('\n').map(line => line.trim()).filter(line => line);
             const headers = lines.slice(0, columnCount);
-            
+
             // Process the data rows
             const data = [];
             const remainingLines = lines.slice(columnCount);
-            
+
             for (let i = 0; i < remainingLines.length; i += columnCount) {
                 if (i + columnCount - 1 < remainingLines.length) {
                     const row = {};
                     let hasNonHeaderValue = false;
-                    
+
                     headers.forEach((header, index) => {
                         const value = remainingLines[i + index];
                         // Skip values that are the same as their column header
@@ -424,47 +691,47 @@
                             row[header] = ''; // Use empty string for skipped values
                         }
                     });
-                    
+
                     // Only add the row if at least one value is not the same as its header
                     if (hasNonHeaderValue) {
                         data.push(row);
                     }
                 }
             }
-            
+
             // Get selected columns
             const selectedColumns = getSelectedColumns();
-            
+
             // Find duplicates in selected columns
             const duplicates = findDuplicates(headers, data, selectedColumns);
-            
+
             // Generate preview table with duplicates highlighted
             generatePreview(headers, data, duplicates);
-            
+
             // Generate duplicate summary
             generateDuplicateSummary(duplicates);
         }
-        
+
         function getSelectedColumns() {
             const checkboxes = document.querySelectorAll('input[name="column-check"]:checked');
             return Array.from(checkboxes).map(cb => cb.value);
         }
-        
+
         function findDuplicates(headers, data, selectedColumns) {
             const duplicates = {};
-            
+
             headers.forEach(header => {
                 // Initialize all headers with empty array
                 duplicates[header] = [];
-                
+
                 // Only process selected columns
                 if (!selectedColumns.includes(header)) {
                     return;
                 }
-                
+
                 // Create a counter for each value in this column
                 const valueCount = {};
-                
+
                 // Count occurrences of each value in the column
                 data.forEach(row => {
                     const value = row[header];
@@ -472,33 +739,33 @@
                         valueCount[value] = (valueCount[value] || 0) + 1;
                     }
                 });
-                
+
                 // Find values that appear more than once
                 duplicates[header] = Object.entries(valueCount)
                     .filter(([_, count]) => count > 1)
                     .map(([value, count]) => ({ value, count }));
             });
-            
+
             return duplicates;
         }
-        
+
         function generatePreview(headers, data, duplicates) {
             const previewDiv = document.getElementById('preview');
-            
+
             // Create table element
             let tableHTML = '<table><thead><tr>';
             headers.forEach(header => {
                 tableHTML += `<th>${header}</th>`;
             });
             tableHTML += '</tr></thead><tbody>';
-            
+
             // Add data rows
             data.forEach(row => {
                 tableHTML += '<tr>';
                 headers.forEach(header => {
                     const value = row[header];
                     const isDuplicate = duplicates[header].some(dup => dup.value === value);
-                    
+
                     if (isDuplicate && value !== header) {
                         tableHTML += `<td class="duplicate">${value}</td>`;
                     } else {
@@ -507,22 +774,22 @@
                 });
                 tableHTML += '</tr>';
             });
-            
+
             tableHTML += '</tbody></table>';
-            
+
             previewDiv.innerHTML = `<h3>Preview:</h3>
             <div class="row-count">Total rows: <strong>${data.length}</strong></div>` + tableHTML;
         }
-        
+
         function generateDuplicateSummary(duplicates) {
             const summaryDiv = document.getElementById('duplicateSummary');
             summaryDiv.style.display = 'block';
-            
+
             let hasDuplicates = false;
             Object.values(duplicates).forEach(dups => {
                 if (dups.length > 0) hasDuplicates = true;
             });
-            
+
             let summaryHTML = `
                 <div class="summary">
                     <div class="summary-header" onclick="toggleSummary()">
@@ -531,31 +798,31 @@
                     </div>
                     <div class="summary-content" id="summaryContent">
             `;
-            
+
             if (!hasDuplicates) {
                 summaryHTML += '<p>No duplicates found.</p>';
             } else {
                 Object.entries(duplicates).forEach(([header, dups]) => {
                     if (dups.length > 0) {
                         summaryHTML += `<p><strong>Column "${header}":</strong></p><ul>`;
-                        
+
                         dups.forEach(dup => {
                             summaryHTML += `<li>"${dup.value}" appears ${dup.count} times</li>`;
                         });
-                        
+
                         summaryHTML += '</ul>';
                     }
                 });
             }
-            
+
             summaryHTML += '</div></div>';
             summaryDiv.innerHTML = summaryHTML;
         }
-        
+
         function toggleSummary() {
             const content = document.getElementById('summaryContent');
             const button = document.getElementById('summaryToggle');
-            
+
             if (content.style.display === 'none') {
                 content.style.display = 'block';
                 button.textContent = '−';
@@ -564,40 +831,53 @@
                 button.textContent = '+';
             }
         }
-        
+
+        function toggleInstructions() {
+            const content = document.getElementById('instructionsContent');
+            const button = document.getElementById('instructionsToggle');
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                button.textContent = '−';
+            } else {
+                content.classList.add('collapsed');
+                button.textContent = '+';
+            }
+        }
+
         function generateExcel() {
             // First run the processText function to ensure we have the latest data
             // Use false to avoid saving again (we already saved when previewing)
             const result = processText(false);
             if (!result) return;
-            
+
             const { headers, data } = result;
-            
+
             // Get selected columns
             const selectedColumns = getSelectedColumns();
-            
+
             // Find duplicates in selected columns
             const duplicates = findDuplicates(headers, data, selectedColumns);
-            
+
             // Convert data to worksheet format
             const wsData = [headers];
-            
+
             data.forEach(row => {
                 const rowArray = headers.map(header => row[header]);
                 wsData.push(rowArray);
             });
-            
+
             // Create worksheet
             const ws = XLSX.utils.aoa_to_sheet(wsData);
-            
+
             // Add duplicate information in a separate sheet
             const dupSheet = createDuplicateInfoSheet(duplicates);
-            
+
             // Create workbook and add the worksheets
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Data');
             XLSX.utils.book_append_sheet(wb, dupSheet, 'Duplicates');
-            
+
             // Get current date and time for filename
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -605,25 +885,26 @@
             const day = String(now.getDate()).padStart(2, '0');
             const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-based
             const year = now.getFullYear();
-            
+
             // Format: exported_data-time_day_month_year.xlsx
             const filename = `exported_data-${hours}${minutes}_${day}_${month}_${year}.xlsx`;
-            
+
             // Generate Excel file and download with the timestamped filename
             XLSX.writeFile(wb, filename);
         }
-        
+
         function createDuplicateInfoSheet(duplicates) {
             const dupData = [['Column', 'Value', 'Count']];
-            
+
             Object.entries(duplicates).forEach(([header, dups]) => {
                 dups.forEach(dup => {
                     dupData.push([header, dup.value, dup.count]);
                 });
             });
-            
+
             return XLSX.utils.aoa_to_sheet(dupData);
         }
     </script>
 </body>
+
 </html>
