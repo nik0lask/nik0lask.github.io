@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Copy Prompt Creator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,13 +13,26 @@
             margin: 0 auto;
             padding: 20px;
             line-height: 1.6;
+            background-color: #f8f8f8;
+        }
+
+        h1, h2 {
+            color: #333;
         }
 
         .input-section {
-            background-color: #f5f5f5;
+            background-color: #ffffff;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
         }
 
         textarea {
@@ -27,17 +41,21 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             resize: vertical;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             font-family: inherit;
+            box-sizing: border-box;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        input[type="number"],
+        input[type="file"] {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             font-family: inherit;
+            box-sizing: border-box;
         }
 
         button {
@@ -65,16 +83,19 @@
             padding: 20px;
             border-radius: 8px;
             margin-top: 20px;
-            min-height: 150px;
+            height: 400px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .card-text {
-            font-size: 18px;
+            font-size: 14px;
             margin-bottom: 20px;
             white-space: pre-wrap;
+            overflow-y: auto;
         }
 
         .navigation {
@@ -98,6 +119,8 @@
 
         .button-section {
             margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
         }
 
         .modal {
@@ -180,6 +203,80 @@
         .notification.show {
             opacity: 1;
         }
+
+        .download-button {
+            padding: 10px 15px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .download-button:hover {
+            background-color: #1E88E5;
+        }
+
+        .excel-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .upload-col, .num-col {
+            flex: 1;
+        }
+
+        .textarea-wrapper {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #4CAF50;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .input-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .toggle-btn:hover {
+            background-color: #1E88E5;
+        }
+
+        .input-content {
+            display: block;
+        }
     </style>
 </head>
 
@@ -190,28 +287,51 @@
     <h1>Copy Prompt Creator</h1>
 
     <div class="input-section">
-        <h2>Input Settings</h2>
+        <div class="input-header">
+            <h2>Input Settings</h2>
+            <button id="toggleInputsBtn" class="toggle-btn">&#9660;</button>
+        </div>
+        <div id="inputContent" class="input-content">
 
-        <label for="preText">Pre-Text (added before each line):</label>
-        <input type="text" id="preText" placeholder="Enter text to add before each line">
+            <label for="preText">Pre-Text (added before each line):</label>
+            <input type="text" id="preText" placeholder="Enter text to add before each line">
 
-        <label for="content">Content (one item per line):</label>
-        <textarea id="content" rows="8" placeholder="Enter your content here, one item per line"></textarea>
+            <div id="excelUploadSection">
+                <div class="excel-group">
+                    <div class="upload-col">
+                        <label for="excelFileUpload">Upload Excel File:</label>
+                        <input type="file" id="excelFileUpload" accept=".xlsx, .xls">
+                    </div>
+                    <div class="num-col">
+                        <label for="numLinesSelect">Number of lines to select (0 for all):</label>
+                        <input type="number" id="numLinesSelect" min="0" value="0">
+                    </div>
+                </div>
+                <button id="loadFromExcelBtn">Load from Excel</button>
+                <button id="downloadModified" class="download-button">Download Modified Excel</button>
+            </div>
 
-        <label for="postText">Post-Text (added after each line):</label>
-        <input type="text" id="postText" placeholder="Enter text to add after each line">
+            <label for="content">Content (one item per line):</label>
+            <div class="textarea-wrapper">
+                <textarea id="content" rows="8" placeholder="Enter your content here, one item per line"></textarea>
+                <div id="contentLoader" class="loader"></div>
+            </div>
 
-        <label for="linesPerCard">Lines per card:</label>
-        <input type="number" id="linesPerCard" min="1" value="1" placeholder="Number of lines to include in each card">
+            <label for="postText">Post-Text (added after each line):</label>
+            <input type="text" id="postText" placeholder="Enter text to add after each line">
 
-        <label for="separatorText">Separator text (between lines in same card):</label>
-        <input type="text" id="separatorText" placeholder="Text to put between lines (e.g., newline, space, comma)">
+            <label for="linesPerCard">Lines per card:</label>
+            <input type="number" id="linesPerCard" min="1" value="1" placeholder="Number of lines to include in each card">
 
-        <div class="button-section">
-            <button id="generateBtn">Generate Cards</button>
-            <button id="saveBtn">Save State</button>
-            <button id="loadBtn">Load State</button>
-            <button id="clearBtn">Clear Storage</button>
+            <label for="separatorText">Separator text (between lines in same card):</label>
+            <input type="text" id="separatorText" placeholder="Text to put between lines (e.g., newline, space, comma)">
+
+            <div class="button-section">
+                <button id="generateBtn">Generate Cards</button>
+                <button id="saveBtn">Save State</button>
+                <button id="loadBtn">Load State</button>
+                <button id="clearBtn">Clear Storage</button>
+            </div>
         </div>
     </div>
 
@@ -251,13 +371,21 @@
         let cardContents = [];
         let currentCardIndex = 0;
         let cardStates = []; // false = unused, true = used/copied
+        let currentDownloadUrl = null;
+        let downloadFilename = null;
 
         // DOM elements
         const welcomeModal = document.getElementById('welcomeModal');
         const loadExistingBtn = document.getElementById('loadExistingBtn');
         const startNewBtn = document.getElementById('startNewBtn');
         const preTextInput = document.getElementById('preText');
+        const excelUploadSection = document.getElementById('excelUploadSection');
+        const excelFileUploadInput = document.getElementById('excelFileUpload');
+        const numLinesSelectInput = document.getElementById('numLinesSelect');
+        const loadFromExcelBtn = document.getElementById('loadFromExcelBtn');
+        const downloadModified = document.getElementById('downloadModified');
         const contentTextarea = document.getElementById('content');
+        const contentLoader = document.getElementById('contentLoader');
         const postTextInput = document.getElementById('postText');
         const linesPerCardInput = document.getElementById('linesPerCard');
         const separatorTextInput = document.getElementById('separatorText');
@@ -274,6 +402,8 @@
         const nextBtn = document.getElementById('nextBtn');
         const cardCounter = document.getElementById('cardCounter');
         const statusInfo = document.getElementById('statusInfo');
+        const toggleInputsBtn = document.getElementById('toggleInputsBtn');
+        const inputContent = document.getElementById('inputContent');
 
         // Initialize app when page loads
         document.addEventListener('DOMContentLoaded', function () {
@@ -283,12 +413,15 @@
             loadExistingBtn.addEventListener('click', loadExistingSession);
             startNewBtn.addEventListener('click', startNewSession);
             generateBtn.addEventListener('click', generateCards);
+            loadFromExcelBtn.addEventListener('click', loadFromExcel);
+            downloadModified.addEventListener('click', downloadModifiedFile);
             copyBtn.addEventListener('click', copyCardText);
             prevBtn.addEventListener('click', showPreviousCard);
             nextBtn.addEventListener('click', showNextCard);
             saveBtn.addEventListener('click', saveToLocalStorage);
             loadBtn.addEventListener('click', loadFromLocalStorage);
             clearBtn.addEventListener('click', clearLocalStorage);
+            toggleInputsBtn.addEventListener('click', toggleInputs);
         });
 
         // Functions
@@ -308,6 +441,149 @@
             welcomeModal.style.display = 'none';
             // Clear any existing data but don't remove from storage yet
             // User can still manually load if they change their mind
+        }
+
+        function toggleInputs() {
+            if (inputContent.style.display === 'none') {
+                inputContent.style.display = 'block';
+                toggleInputsBtn.innerHTML = '&#9660;'; // down
+            } else {
+                inputContent.style.display = 'none';
+                toggleInputsBtn.innerHTML = '&#9654;'; // right
+            }
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function loadFromExcel() {
+            const file = excelFileUploadInput.files[0];
+            if (!file) {
+                alert('Please select an Excel file to upload.');
+                return;
+            }
+
+            contentLoader.style.display = 'block';
+            contentTextarea.disabled = true;
+
+            const reader = new FileReader();
+            reader.readAsArrayBuffer(file);
+            reader.onload = function(e) {
+                try {
+                    const data = e.target.result;
+                    var workbook = XLSX.read(data, { type: 'array' });
+
+                    const linesSheet = workbook.Sheets['Lines'];
+                    if (!linesSheet) {
+                        alert('Sheet "Lines" not found in the uploaded file.');
+                        contentLoader.style.display = 'none';
+                        contentTextarea.disabled = false;
+                        return;
+                    }
+
+                    // Get row data as array of arrays
+                    var rowData = XLSX.utils.sheet_to_json(linesSheet, { header: 1, defval: '' });
+
+                    // Collect non-empty lines from first column with their row indices
+                    var lines = [];
+                    for (let i = 0; i < rowData.length; i++) {
+                        const value = rowData[i][0];
+                        if (value != null && String(value).trim() !== '') {
+                            lines.push({ row: i, value: value });
+                        }
+                    }
+
+                    if (lines.length === 0) {
+                        alert('No non-empty lines found in the "Lines" sheet.');
+                        contentLoader.style.display = 'none';
+                        contentTextarea.disabled = false;
+                        return;
+                    }
+
+                    // Get number of lines to select
+                    let numLines = parseInt(numLinesSelectInput.value) || 0;
+                    if (numLines === 0) {
+                        numLines = lines.length;
+                    }
+                    if (numLines > lines.length) {
+                        numLines = lines.length;
+                    }
+
+                    // Randomly select
+                    shuffle(lines);
+                    const selected = lines.slice(0, numLines);
+
+                    // Populate content textarea
+                    contentTextarea.value = selected.map(s => s.value).join('\n');
+
+                    // Prepare remaining rows for "Lines" sheet
+                    let remainingRows = [];
+                    for (let i = 0; i < rowData.length; i++) {
+                        if (!selected.some(s => s.row === i)) {
+                            remainingRows.push(rowData[i]);
+                        }
+                    }
+
+                    // Update "Lines" sheet
+                    workbook.Sheets['Lines'] = XLSX.utils.aoa_to_sheet(remainingRows);
+
+                    // Get or create "Used" sheet
+                    let usedSheetName = 'Used';
+                    if (!workbook.Sheets[usedSheetName]) {
+                        workbook.SheetNames.push(usedSheetName);
+                        workbook.Sheets[usedSheetName] = XLSX.utils.aoa_to_sheet([]);
+                    }
+                    var usedRows = XLSX.utils.sheet_to_json(workbook.Sheets[usedSheetName], { header: 1, defval: '' });
+
+                    // Append selected rows (full rows)
+                    const selectedRows = selected.map(s => rowData[s.row]);
+                    usedRows.push(...selectedRows);
+
+                    // Update "Used" sheet
+                    workbook.Sheets[usedSheetName] = XLSX.utils.aoa_to_sheet(usedRows);
+
+                    // Prepare for download
+                    var wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'binary' });
+
+                    function s2ab(s) {
+                        var buf = new ArrayBuffer(s.length);
+                        var view = new Uint8Array(buf);
+                        for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+                        return buf;
+                    }
+
+                    var blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
+                    if (currentDownloadUrl) {
+                        URL.revokeObjectURL(currentDownloadUrl);
+                    }
+                    currentDownloadUrl = URL.createObjectURL(blob);
+                    downloadFilename = `modified_${file.name}`;
+                    downloadModified.style.display = 'inline-block';
+
+                    contentLoader.style.display = 'none';
+                    contentTextarea.disabled = false;
+                } catch (error) {
+                    console.error('Error processing Excel file:', error);
+                    alert('Error processing the Excel file. Please check the format.');
+                    contentLoader.style.display = 'none';
+                    contentTextarea.disabled = false;
+                }
+            };
+        }
+
+        function downloadModifiedFile() {
+            if (currentDownloadUrl && downloadFilename) {
+                const a = document.createElement('a');
+                a.href = currentDownloadUrl;
+                a.download = downloadFilename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
         }
 
         function generateCards() {
@@ -346,6 +622,10 @@
 
             cardSection.style.display = 'block';
             updateCardDisplay();
+
+            // Automatically minimize inputs
+            inputContent.style.display = 'none';
+            toggleInputsBtn.innerHTML = '&#9654;';
         }
 
         function updateCardDisplay() {
@@ -491,6 +771,9 @@
 
                 updateCardDisplay();
 
+                // Hide upload section
+                excelUploadSection.style.display = 'none';
+
                 // Only show alert if called manually (not from welcome modal)
                 if (welcomeModal.style.display === 'none' || !welcomeModal.style.display) {
                     alert('Saved state loaded successfully!');
@@ -505,9 +788,9 @@
             if (confirm('Are you sure you want to clear all saved data?')) {
                 localStorage.removeItem('cardCreatorData');
                 alert('Storage cleared successfully!');
+                location.reload();
             }
         }
     </script>
 </body>
-
 </html>
