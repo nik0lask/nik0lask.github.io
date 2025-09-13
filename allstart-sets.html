@@ -53,6 +53,7 @@
             height: 100%;
             overflow-y: scroll;
             scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid #ffffff;
             border-radius: 0.25rem;
@@ -240,12 +241,20 @@
                     const minuteOption = document.querySelector(`#minutes-scroll .time-option:nth-child(${minutes + 1})`);
                     if (hourOption) hourOption.classList.add('selected');
                     if (minuteOption) minuteOption.classList.add('selected');
-                    hoursScroll.scrollTop = (hours * 40) - hoursScroll.offsetHeight / 2 + 20;
-                    minutesScroll.scrollTop = (minutes * 40) - minutesScroll.offsetHeight / 2 + 20;
+                    hoursScroll.scrollTo({ top: hours * 40, behavior: 'smooth' });
+                    minutesScroll.scrollTo({ top: minutes * 40, behavior: 'smooth' });
                     displaySlot(nextSlot);
                 };
                 nextSetDiv.appendChild(button);
             }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
         }
 
         function populateTimePickers() {
@@ -260,7 +269,7 @@
                     selectedHour = i;
                     document.querySelectorAll('#hours-scroll .time-option').forEach(opt => opt.classList.remove('selected'));
                     hour.classList.add('selected');
-                    hoursScroll.scrollTop = hour.offsetTop - hoursScroll.offsetHeight / 2 + hour.offsetHeight / 2;
+                    hoursScroll.scrollTo({ top: i * 40, behavior: 'smooth' });
                 };
                 hoursScroll.appendChild(hour);
             }
@@ -273,12 +282,12 @@
                     selectedMinute = i;
                     document.querySelectorAll('#minutes-scroll .time-option').forEach(opt => opt.classList.remove('selected'));
                     minute.classList.add('selected');
-                    minutesScroll.scrollTop = minute.offsetTop - minutesScroll.offsetHeight / 2 + minute.offsetHeight / 2;
+                    minutesScroll.scrollTo({ top: i * 40, behavior: 'smooth' });
                 };
                 minutesScroll.appendChild(minute);
             }
 
-            hoursScroll.addEventListener('scroll', () => {
+            hoursScroll.addEventListener('scroll', debounce(() => {
                 const scrollTop = hoursScroll.scrollTop;
                 const optionHeight = 40;
                 const index = Math.round(scrollTop / optionHeight);
@@ -287,11 +296,11 @@
                 const options = hoursScroll.querySelectorAll('.time-option');
                 if (options[index]) {
                     options[index].classList.add('selected');
-                    hoursScroll.scrollTop = index * optionHeight;
+                    hoursScroll.scrollTo({ top: index * 40, behavior: 'smooth' });
                 }
-            });
+            }, 100));
 
-            minutesScroll.addEventListener('scroll', () => {
+            minutesScroll.addEventListener('scroll', debounce(() => {
                 const scrollTop = minutesScroll.scrollTop;
                 const optionHeight = 40;
                 const index = Math.round(scrollTop / optionHeight);
@@ -300,9 +309,9 @@
                 const options = minutesScroll.querySelectorAll('.time-option');
                 if (options[index]) {
                     options[index].classList.add('selected');
-                    minutesScroll.scrollTop = index * optionHeight;
+                    minutesScroll.scrollTo({ top: index * 40, behavior: 'smooth' });
                 }
-            });
+            }, 100));
         }
 
         // Handle custom time input
