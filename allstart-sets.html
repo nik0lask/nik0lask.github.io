@@ -12,9 +12,9 @@
             display: flex;
             flex-direction: column;
             color: #ffffff;
-            background: linear-gradient(-45deg, #4b0082, #1e90ff, #ff1493, #00ced1);
+            background: linear-gradient(-45deg, #000000, #00ff00, #ffffff);
             background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
+            animation: gradient 10s ease infinite;
         }
         @keyframes gradient {
             0% { background-position: 0% 50%; }
@@ -28,17 +28,59 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .glitch {
+            animation: glitch 1.5s infinite;
+            text-shadow: 0 0 5px #00ff00, 0 0 10px #00b7eb;
+        }
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            10% { transform: translate(-2px, 2px); }
+            20% { transform: translate(2px, -2px); }
+            30% { transform: translate(0); }
+            100% { transform: translate(0); }
+        }
         #current-set {
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 15px #00ff00;
+            border: 1px solid #00b7eb;
         }
-        #alternatives button, #next-set button {
-            width: 100%;
-            margin-bottom: 0.5rem;
-            transition: transform 0.2s ease;
+        .primary-button {
+            background: #00ff00;
+            border: #000000 1px solid;
+            color: #000000;
+            font-weight: bold;
+            box-shadow: 0 0 15px #00ff00;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-radius: 1rem;
         }
-        #alternatives button:hover, #next-set button:hover {
+        .primary-button:hover {
             transform: scale(1.05);
+            box-shadow: 0 0 20px #ff00ff;
+        }
+        .secondary-button {
+            background: rgba(0, 0, 0, 0.9);
+            color: #ffffff;
+            box-shadow: 0 0 10px #00b7eb;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-radius: 1rem;
+            min-height: 100px;
+            line-height: 1.5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .secondary-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #ff00ff;
+        }
+        .tertiary-link {
+            color: #000000;
+            font-weight: bold;
+            text-decoration: none;
+            transition: text-shadow 0.2s ease;
+        }
+        .tertiary-link:hover {
+            text-shadow: 0 0 10px #00b7eb;
         }
         .time-picker {
             display: flex;
@@ -54,12 +96,13 @@
             overflow-y: scroll;
             scroll-snap-type: y mandatory;
             scroll-behavior: smooth;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid #ffffff;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ff00;
             border-radius: 0.25rem;
             text-align: center;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            box-shadow: 0 0 10px #00b7eb;
         }
         .time-scroll::-webkit-scrollbar {
             display: none;
@@ -71,10 +114,12 @@
             cursor: pointer;
             scroll-snap-align: center;
             transition: background 0.2s;
+            color: #ffffff;
         }
         .time-option.selected {
-            background: #ff1493;
+            background: #ff00ff;
             font-weight: bold;
+            box-shadow: 0 0 10px #00ff00;
         }
         .time-picker::before {
             content: '';
@@ -83,27 +128,60 @@
             left: 0;
             right: 0;
             height: 40px;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(0, 255, 0, 0.3);
             transform: translateY(-50%);
             pointer-events: none;
             z-index: 10;
         }
+        #map-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 20;
+            justify-content: center;
+            align-items: center;
+            padding: 0.5rem;
+        }
+        #map-modal img {
+            max-width: min(85vw, 350px);
+            max-height: 85vh;
+            border-radius: 0.5rem;
+            object-fit: contain;
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 15px #ff00ff;
+        }
+        #close-map {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+        }
     </style>
 </head>
 <body class="p-4">
-    <div class="max-w-md mx-auto">
-        <h1 class="text-2xl font-bold text-center mb-4 fade-in">Festival Timeline</h1>
-        <div id="current-time" class="text-lg text-center text-gray-200 mb-2 fade-in"></div>
-        <div id="current-set" class="text-xl font-semibold text-center p-4 rounded-lg mb-4 fade-in"></div>
+    <div class="max-w-md mx-auto" style="display: flex; align-items: center; justify-content: center; flex-direction: column;">
+        <h1 class="text-3xl font-bold text-center mb-4 fade-in glitch">Drum & Bass Festival</h1>
+        <div id="current-time" class="text-lg text-center text-gray-200 mb-2 fade-in glitch"></div>
+        <div id="current-set" class="text-xl font-semibold text-center p-4 rounded-lg mb-4 fade-in glitch"></div>
         <div id="alternatives" class="flex flex-col gap-2 mb-4"></div>
         <div id="next-set" class="flex flex-col gap-2 mb-4 fade-in"></div>
-        <div id="time-selection" class="flex flex-col gap-2 fade-in">
+        <button id="show-map" class="tertiary-link text-center py-2 fade-in">Show Venue Map</button>
+        <div id="time-selection" class="flex flex-col gap-2 fade-in mt-4" style="margin-top: 24px;">
             <div class="time-picker">
                 <div id="hours-scroll" class="time-scroll"></div>
                 <div id="minutes-scroll" class="time-scroll"></div>
             </div>
-            <button id="set-time" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded fade-in">Set Time</button>
-            <button id="reset-time" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded fade-in">Reset to Current Time</button>
+            <button id="set-time" class="primary-button py-2 px-4 fade-in">Set Time</button>
+            <button id="reset-time" class="tertiary-link text-center py-2 fade-in">Reset to Current Time</button>
+        </div>
+    </div>
+    <div id="map-modal" class="flex">
+        <div class="relative">
+            <img src="https://nik0lask.github.io/allstars-map.jpg" alt="Venue Map">
+            <button id="close-map" class="tertiary-button py-1 px-2 rounded">Close</button>
         </div>
     </div>
 
@@ -190,7 +268,7 @@
                 // Add buttons for other available sets
                 if (currentChoice !== 'primary' && slot.primary) {
                     const button = document.createElement('button');
-                    button.className = 'bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded fade-in';
+                    button.className = 'secondary-button py-3 px-4 fade-in';
                     button.innerText = `Switch to Primary: ${slot.primary}`;
                     button.onclick = () => {
                         currentChoice = 'primary';
@@ -201,7 +279,7 @@
 
                 if (currentChoice !== 'secondary' && slot.secondary) {
                     const button = document.createElement('button');
-                    button.className = 'bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded fade-in';
+                    button.className = 'secondary-button py-3 px-4 fade-in';
                     button.innerText = `Switch to Secondary: ${slot.secondary}`;
                     button.onclick = () => {
                         currentChoice = 'secondary';
@@ -212,7 +290,7 @@
 
                 if (currentChoice !== 'tertiary' && slot.tertiary) {
                     const button = document.createElement('button');
-                    button.className = 'bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded fade-in';
+                    button.className = 'secondary-button py-3 px-4 fade-in';
                     button.innerText = `Switch to Tertiary: ${slot.tertiary}`;
                     button.onclick = () => {
                         currentChoice = 'tertiary';
@@ -226,7 +304,7 @@
             const nextSlot = getNextSlot();
             if (nextSlot) {
                 const button = document.createElement('button');
-                button.className = 'bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded fade-in';
+                button.className = 'primary-button py-2 px-4 fade-in';
                 button.innerText = `Next Set: ${nextSlot.primary} (${nextSlot.start} - ${nextSlot.end})`;
                 button.onclick = () => {
                     const [hours, minutes] = nextSlot.start.split(':').map(Number);
@@ -331,9 +409,19 @@
             customTime = null;
             selectedHour = null;
             selectedMinute = null;
-            document.querySelectorAll('.time-option').forEach(opt => opt.classList.remove('selected'));
+            document.querySelectorAll('#hours-scroll .time-option').forEach(opt => opt.classList.remove('selected'));
+            document.querySelectorAll('#minutes-scroll .time-option').forEach(opt => opt.classList.remove('selected'));
             const slot = getCurrentSlot();
             displaySlot(slot);
+        });
+
+        // Show/hide map modal
+        document.getElementById('show-map').addEventListener('click', () => {
+            document.getElementById('map-modal').style.display = 'flex';
+        });
+
+        document.getElementById('close-map').addEventListener('click', () => {
+            document.getElementById('map-modal').style.display = 'none';
         });
 
         // Initial setup
