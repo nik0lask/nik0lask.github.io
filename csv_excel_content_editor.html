@@ -1,0 +1,1270 @@
+        const progressBar = document.getElementById('progressBar');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const menuIcon = document.getElementById('menuIcon');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const sideMenu = document.getElementById('sideMenu');
+        const saveList = document.getElementById('saveList<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV/Excel Content Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #000000;
+            border: 1px solid #ffffff;
+            border-radius: 20px;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #ffffff;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2em;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 30px;
+            border: 2px dashed #ffffff;
+            border-radius: 10px;
+            text-align: center;
+            background: #1a1a1a;
+            transition: all 0.3s;
+        }
+
+        .upload-section.hidden {
+            display: none;
+        }
+
+        .upload-section input[type="file"] {
+            display: none;
+        }
+
+        .upload-label {
+            display: inline-block;
+            padding: 15px 30px;
+            background: rgb(178, 37, 46);
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .upload-label:hover {
+            background: rgb(158, 27, 36);
+            transform: translateY(-2px);
+        }
+
+        .file-name {
+            margin-top: 15px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .progress-section {
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #ffffff;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 12px;
+            background: #333333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: rgb(178, 37, 46);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .editor-section {
+            display: none;
+        }
+
+        .fields-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .fields-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .field-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .field-label {
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 0.95em;
+        }
+
+        .comment-link {
+            color: #ffffff;
+            font-size: 0.85em;
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .comment-link:hover {
+            color: #cccccc;
+            text-decoration: underline;
+        }
+
+        .comment-link.has-comment {
+            font-weight: 600;
+        }
+
+        .field-input {
+            padding: 12px;
+            border: 2px solid #333333;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+            font-family: inherit;
+            height: 160px;
+            resize: vertical;
+            vertical-align: top;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .field-input:focus {
+            outline: none;
+            border-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 30px;
+            width: 100%;
+            align-items: center;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            max-width: 240px;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: #000000;
+            color: white;
+            border: 1px solid #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: #1a1a1a;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgb(178, 37, 46);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: rgb(158, 27, 36);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: rgb(178, 37, 46);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: rgb(158, 27, 36);
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .menu-icon {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .menu-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .menu-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: #000000;
+            stroke-width: 2;
+        }
+
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: -350px;
+            width: 350px;
+            height: 100vh;
+            background: #000000;
+            border-right: 1px solid #ffffff;
+            box-shadow: 4px 0 20px rgba(255, 255, 255, 0.1);
+            transition: left 0.3s ease;
+            z-index: 999;
+            overflow-y: auto;
+            padding: 80px 20px 20px 20px;
+        }
+
+        .side-menu.open {
+            left: 0;
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 998;
+        }
+
+        .menu-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .side-menu h2 {
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .save-list {
+            list-style: none;
+        }
+
+        .save-item {
+            background: #1a1a1a;
+            border: 2px solid #333333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .save-item:hover {
+            border-color: #ffffff;
+            background: #2a2a2a;
+        }
+
+        .save-item.active {
+            border-color: rgb(178, 37, 46);
+            background: rgb(178, 37, 46);
+            color: white;
+        }
+
+        .save-info {
+            flex: 1;
+        }
+
+        .save-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #ffffff;
+        }
+
+        .save-item.active .save-name {
+            color: #ffffff;
+        }
+
+        .save-meta {
+            font-size: 0.85em;
+            opacity: 0.7;
+            color: #999999;
+        }
+
+        .save-item.active .save-meta {
+            color: #ffffff;
+        }
+
+        .delete-btn {
+            background: rgb(178, 37, 46);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: auto;
+            max-width: none;
+        }
+
+        .delete-btn:hover {
+            background: rgb(158, 27, 36);
+        }
+
+        .delete-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .new-save-btn {
+            width: 100%;
+            padding: 15px;
+            background: rgb(178, 37, 46);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .new-save-btn:hover {
+            background: rgb(158, 27, 36);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .storage-warning {
+            background: #2a2a1a;
+            border: 1px solid rgb(178, 37, 46);
+            color: #ffffff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .save-limit {
+            font-size: 0.85em;
+            color: #999;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #000000;
+            border: 1px solid #ffffff;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #333333;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            margin-bottom: 20px;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .modal-textarea:focus {
+            outline: none;
+            border-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .modal-btn-primary {
+            background: rgb(178, 37, 46);
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: rgb(158, 27, 36);
+        }
+
+        .modal-btn-secondary {
+            background: #000000;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #1a1a1a;
+        }
+
+        .export-options {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #333333;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            font-size: 0.95em;
+            color: #ffffff;
+        }
+
+        .format-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .format-btn {
+            flex: 1;
+            padding: 6px 8px;
+            background: #000000;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .format-btn:hover {
+            background: #1a1a1a;
+        }
+
+        .format-btn.selected {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        @media (max-width: 768px) {
+            .side-menu {
+                width: 280px;
+                left: -280px;
+            }
+            
+            .menu-icon {
+                top: 10px;
+                left: 10px;
+            }
+
+            .button {
+                max-width: none;
+            }
+
+        }
+    </style>
+</head>
+<body>
+    <div class="menu-icon" id="menuIcon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M3 12h18M3 6h18M3 18h18" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </div>
+
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <div class="side-menu" id="sideMenu">
+        <h2>💾 Saved Files</h2>
+        <div class="save-limit">Max 5 saves • Large files may not fit</div>
+        <button class="new-save-btn" id="newSaveBtn" style="max-width: none;">+ New File</button>
+        <div id="storageWarning" class="storage-warning" style="display: none;"></div>
+        <ul class="save-list" id="saveList"></ul>
+    </div>
+
+    <div class="container">
+        <h1>📊 CSV/Excel Row Editor</h1>
+        
+        <div class="upload-section">
+            <label for="fileInput" class="upload-label">Choose CSV or Excel File</label>
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+            <div class="file-name" id="fileName"></div>
+        </div>
+
+        <div class="progress-section" id="progressSection">
+            <div class="progress-text" id="progressText">Row 1 of 10</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <div class="editor-section" id="editorSection">
+            <div class="fields-grid" id="fieldsGrid"></div>
+            
+            <div class="navigation-buttons">
+                <button class="btn-primary" id="prevBtn">←</button>
+                <button class="btn-primary" id="nextBtn">→</button>
+            </div>
+
+            <div class="export-options">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="includeComments">
+                    <label for="includeComments">Include comments in export</label>
+                </div>
+                <div class="format-selector">
+                    <button class="format-btn selected" id="csvFormatBtn">CSV</button>
+                    <button class="format-btn" id="excelFormatBtn">Excel</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-secondary" id="exportBtn">Export File</button>
+                <button class="btn-primary" id="clearBtn" style="border: none;">Clear Progress</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="commentModal">
+        <div class="modal-content">
+            <div class="modal-header">Add Comment</div>
+            <textarea class="modal-textarea" id="commentText" placeholder="Enter your comment here..."></textarea>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" id="cancelCommentBtn">Cancel</button>
+                <button class="modal-btn modal-btn-primary" id="saveCommentBtn">Save Comment</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+        let headers = [];
+        let currentRow = 0;
+        let fileType = '';
+        let fileName = '';
+        let currentSaveId = null;
+        let comments = {}; // Store comments by row and column: {rowIndex: {columnIndex: comment}}
+        let currentCommentField = null;
+
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileName');
+        const uploadSection = document.querySelector('.upload-section');
+        const progressSection = document.getElementById('progressSection');
+        const editorSection = document.getElementById('editorSection');
+        const fieldsGrid = document.getElementById('fieldsGrid');
+        const progressText = document.getElementById('progressText');
+        const progressBar = document.getElementById('progressBar');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const menuIcon = document.getElementById('menuIcon');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const sideMenu = document.getElementById('sideMenu');
+        const saveList = document.getElementById('saveList');
+        const newSaveBtn = document.getElementById('newSaveBtn');
+        const storageWarning = document.getElementById('storageWarning');
+        const commentModal = document.getElementById('commentModal');
+        const commentText = document.getElementById('commentText');
+        const saveCommentBtn = document.getElementById('saveCommentBtn');
+        const cancelCommentBtn = document.getElementById('cancelCommentBtn');
+        const includeCommentsCheckbox = document.getElementById('includeComments');
+        const csvFormatBtn = document.getElementById('csvFormatBtn');
+        const excelFormatBtn = document.getElementById('excelFormatBtn');
+
+        let selectedFormat = 'csv';
+
+        // Use localStorage for persistence with size management
+        const SAVES_KEY = 'csvExcelEditorSaves';
+        const CURRENT_SAVE_KEY = 'csvExcelEditorCurrentSave';
+        const MAX_SAVES = 5; // Limit number of saves to prevent quota issues
+
+        fileInput.addEventListener('change', handleFileUpload);
+        prevBtn.addEventListener('click', () => navigateRow(-1));
+        nextBtn.addEventListener('click', () => navigateRow(1));
+        exportBtn.addEventListener('click', () => exportFile(selectedFormat));
+        clearBtn.addEventListener('click', clearProgress);
+        menuIcon.addEventListener('click', toggleMenu);
+        menuOverlay.addEventListener('click', toggleMenu);
+        newSaveBtn.addEventListener('click', createNewSave);
+        saveCommentBtn.addEventListener('click', saveComment);
+        cancelCommentBtn.addEventListener('click', closeCommentModal);
+        csvFormatBtn.addEventListener('click', () => selectFormat('csv'));
+        excelFormatBtn.addEventListener('click', () => selectFormat('excel'));
+        commentModal.addEventListener('click', (e) => {
+            if (e.target === commentModal) closeCommentModal();
+        });
+
+        // Load saved state on page load
+        window.addEventListener('load', () => {
+            loadCurrentSave();
+            renderSaveList();
+            if (data.length > 0) {
+                showEditor();
+                renderRow();
+            }
+        });
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            fileName = file.name;
+            fileNameDisplay.textContent = `Selected: ${fileName}`;
+            
+            const extension = fileName.split('.').pop().toLowerCase();
+            fileType = extension;
+
+            if (extension === 'csv') {
+                parseCSV(file);
+            } else if (extension === 'xlsx' || extension === 'xls') {
+                parseExcel(file);
+            }
+        }
+
+        function parseCSV(file) {
+            Papa.parse(file, {
+                complete: function(results) {
+                    processData(results.data);
+                },
+                skipEmptyLines: true
+            });
+        }
+
+        function parseExcel(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                processData(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processData(rawData) {
+            headers = rawData[0];
+            data = rawData.slice(1).filter(row => row.some(cell => cell !== '' && cell !== null && cell !== undefined));
+            
+            currentRow = 0;
+            
+            // Create new save
+            if (!currentSaveId) {
+                currentSaveId = 'save_' + Date.now();
+            }
+            
+            saveState();
+            
+            showEditor();
+            renderRow();
+        }
+
+        function showEditor() {
+            uploadSection.classList.add('hidden');
+            progressSection.style.display = 'block';
+            editorSection.style.display = 'block';
+        }
+
+        function renderRow() {
+            fieldsGrid.innerHTML = '';
+            
+            const row = data[currentRow];
+            
+            // Initialize comments for this row if not exists
+            if (!comments[currentRow]) {
+                comments[currentRow] = {};
+            }
+            
+            headers.forEach((header, index) => {
+                const fieldGroup = document.createElement('div');
+                fieldGroup.className = 'field-group';
+                
+                const fieldHeader = document.createElement('div');
+                fieldHeader.className = 'field-header';
+                
+                const label = document.createElement('label');
+                label.className = 'field-label';
+                label.textContent = header || `Column ${index + 1}`;
+                
+                const commentLink = document.createElement('a');
+                commentLink.className = 'comment-link';
+                commentLink.textContent = comments[currentRow][index] ? '💬 Edit comment' : '+ Add comment';
+                if (comments[currentRow][index]) {
+                    commentLink.classList.add('has-comment');
+                }
+                commentLink.href = '#';
+                commentLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openCommentModal(index);
+                });
+                
+                fieldHeader.appendChild(label);
+                fieldHeader.appendChild(commentLink);
+                
+                const input = document.createElement('textarea');
+                input.className = 'field-input';
+                input.value = row[index] || '';
+                input.dataset.columnIndex = index;
+                
+                input.addEventListener('input', (e) => {
+                    data[currentRow][e.target.dataset.columnIndex] = e.target.value;
+                });
+                
+                fieldGroup.appendChild(fieldHeader);
+                fieldGroup.appendChild(input);
+                fieldsGrid.appendChild(fieldGroup);
+            });
+            
+            updateProgress();
+            updateNavigationButtons();
+        }
+
+        function updateProgress() {
+            const total = data.length;
+            const current = currentRow + 1;
+            progressText.textContent = `Row ${current} of ${total}`;
+            progressBar.style.width = `${(current / total) * 100}%`;
+        }
+
+        function updateNavigationButtons() {
+            prevBtn.disabled = currentRow === 0;
+            nextBtn.disabled = currentRow === data.length - 1;
+        }
+
+        function navigateRow(direction) {
+            saveState();
+            
+            currentRow += direction;
+            if (currentRow < 0) currentRow = 0;
+            if (currentRow >= data.length) currentRow = data.length - 1;
+            
+            renderRow();
+        }
+
+        function openCommentModal(columnIndex) {
+            currentCommentField = columnIndex;
+            commentText.value = comments[currentRow][columnIndex] || '';
+            commentModal.classList.add('show');
+            commentText.focus();
+        }
+
+        function closeCommentModal() {
+            commentModal.classList.remove('show');
+            currentCommentField = null;
+            commentText.value = '';
+        }
+
+        function saveComment() {
+            if (currentCommentField !== null) {
+                const comment = commentText.value.trim();
+                if (comment) {
+                    comments[currentRow][currentCommentField] = comment;
+                } else {
+                    delete comments[currentRow][currentCommentField];
+                }
+                saveState();
+                renderRow();
+                closeCommentModal();
+            }
+        }
+
+        function selectFormat(format) {
+            selectedFormat = format;
+            if (format === 'csv') {
+                csvFormatBtn.classList.add('selected');
+                excelFormatBtn.classList.remove('selected');
+            } else {
+                excelFormatBtn.classList.add('selected');
+                csvFormatBtn.classList.remove('selected');
+            }
+        }
+
+        function saveState() {
+            if (!currentSaveId) return;
+            
+            try {
+                const saves = getAllSaves();
+                
+                // Check if we need to remove oldest save when at limit
+                const saveIds = Object.keys(saves);
+                if (saveIds.length >= MAX_SAVES && !saves[currentSaveId]) {
+                    // Find oldest save (excluding current one)
+                    const oldestId = saveIds
+                        .filter(id => id !== currentSaveId)
+                        .sort((a, b) => new Date(saves[a].lastModified) - new Date(saves[b].lastModified))[0];
+                    
+                    if (oldestId) {
+                        delete saves[oldestId];
+                        showStorageWarning(`Removed oldest save to make room for new file`);
+                    }
+                }
+                
+                // Save current state
+                saves[currentSaveId] = {
+                    data: data,
+                    headers: headers,
+                    currentRow: currentRow,
+                    fileName: fileName,
+                    fileType: fileType,
+                    comments: comments,
+                    lastModified: new Date().toISOString(),
+                    id: currentSaveId
+                };
+                
+                localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
+                localStorage.setItem(CURRENT_SAVE_KEY, currentSaveId);
+                renderSaveList();
+                hideStorageWarning();
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    handleQuotaExceeded();
+                } else {
+                    console.error('Error saving state:', e);
+                    showStorageWarning('Error saving file. Please try again.');
+                }
+            }
+        }
+
+        function handleQuotaExceeded() {
+            showStorageWarning('File too large for storage! Deleting oldest saves...');
+            
+            const saves = getAllSaves();
+            const saveIds = Object.keys(saves);
+            
+            // Try removing oldest saves until we have space
+            const sortedIds = saveIds
+                .filter(id => id !== currentSaveId)
+                .sort((a, b) => new Date(saves[a].lastModified) - new Date(saves[b].lastModified));
+            
+            let removed = 0;
+            for (const oldId of sortedIds) {
+                delete saves[oldId];
+                removed++;
+                
+                try {
+                    localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
+                    
+                    // Try to save current again
+                    saves[currentSaveId] = {
+                        data: data,
+                        headers: headers,
+                        currentRow: currentRow,
+                        fileName: fileName,
+                        fileType: fileType,
+                        comments: comments,
+                        lastModified: new Date().toISOString(),
+                        id: currentSaveId
+                    };
+                    localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
+                    localStorage.setItem(CURRENT_SAVE_KEY, currentSaveId);
+                    renderSaveList();
+                    showStorageWarning(`Removed ${removed} old save(s) to make room`);
+                    return;
+                } catch (e) {
+                    // Continue trying to remove more
+                    continue;
+                }
+            }
+            
+            // If we still can't save, alert the user
+            alert('This file is too large to store in browser memory. You can still edit it, but progress will not be saved. Consider exporting your work frequently.');
+            currentSaveId = null;
+        }
+
+        function showStorageWarning(message) {
+            storageWarning.textContent = message;
+            storageWarning.style.display = 'block';
+            setTimeout(hideStorageWarning, 5000);
+        }
+
+        function hideStorageWarning() {
+            storageWarning.style.display = 'none';
+        }
+
+        function getAllSaves() {
+            try {
+                const saved = localStorage.getItem(SAVES_KEY);
+                return saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                console.error('Error loading saves:', e);
+                return {};
+            }
+        }
+
+        function loadCurrentSave() {
+            try {
+                const savedId = localStorage.getItem(CURRENT_SAVE_KEY);
+                if (savedId) {
+                    loadSave(savedId);
+                }
+            } catch (e) {
+                console.error('Error loading current save:', e);
+            }
+        }
+
+        function loadSave(saveId) {
+            const saves = getAllSaves();
+            const save = saves[saveId];
+            
+            if (save) {
+                data = save.data || [];
+                headers = save.headers || [];
+                currentRow = save.currentRow || 0;
+                fileName = save.fileName || '';
+                fileType = save.fileType || '';
+                comments = save.comments || {};
+                currentSaveId = saveId;
+                
+                if (fileName) {
+                    fileNameDisplay.textContent = `Loaded: ${fileName}`;
+                }
+                
+                localStorage.setItem(CURRENT_SAVE_KEY, saveId);
+                renderSaveList();
+                return true;
+            }
+            return false;
+        }
+
+        function deleteSave(saveId, event) {
+            event.stopPropagation();
+            
+            if (confirm('Are you sure you want to delete this save?')) {
+                const saves = getAllSaves();
+                delete saves[saveId];
+                localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
+                
+                if (currentSaveId === saveId) {
+                    // Clear current data
+                    data = [];
+                    headers = [];
+                    currentRow = 0;
+                    fileName = '';
+                    fileType = '';
+                    currentSaveId = null;
+                    
+                    uploadSection.classList.remove('hidden');
+                    progressSection.style.display = 'none';
+                    editorSection.style.display = 'none';
+                    fileInput.value = '';
+                    fileNameDisplay.textContent = '';
+                    
+                    localStorage.removeItem(CURRENT_SAVE_KEY);
+                }
+                
+                renderSaveList();
+            }
+        }
+
+        function renderSaveList() {
+            const saves = getAllSaves();
+            const saveIds = Object.keys(saves);
+            
+            if (saveIds.length === 0) {
+                saveList.innerHTML = '<div class="empty-state">No saved files yet.<br>Upload a file to get started!</div>';
+                return;
+            }
+            
+            saveList.innerHTML = '';
+            
+            saveIds.sort((a, b) => {
+                return new Date(saves[b].lastModified) - new Date(saves[a].lastModified);
+            });
+            
+            saveIds.forEach(saveId => {
+                const save = saves[saveId];
+                const li = document.createElement('li');
+                li.className = 'save-item' + (currentSaveId === saveId ? ' active' : '');
+                
+                const date = new Date(save.lastModified);
+                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                
+                li.innerHTML = `
+                    <div class="save-info">
+                        <div class="save-name">${save.fileName || 'Untitled'}</div>
+                        <div class="save-meta">Rows: ${save.data.length} • ${dateStr}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteSave('${saveId}', event)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                `;
+                
+                li.addEventListener('click', () => {
+                    if (loadSave(saveId)) {
+                        showEditor();
+                        renderRow();
+                        toggleMenu();
+                    }
+                });
+                
+                saveList.appendChild(li);
+            });
+        }
+
+        function toggleMenu() {
+            sideMenu.classList.toggle('open');
+            menuOverlay.classList.toggle('visible');
+        }
+
+        function createNewSave() {
+            data = [];
+            headers = [];
+            currentRow = 0;
+            fileName = '';
+            fileType = '';
+            comments = {};
+            currentSaveId = null;
+            
+            uploadSection.classList.remove('hidden');
+            progressSection.style.display = 'none';
+            editorSection.style.display = 'none';
+            fileInput.value = '';
+            fileNameDisplay.textContent = '';
+            
+            localStorage.removeItem(CURRENT_SAVE_KEY);
+            
+            toggleMenu();
+        }
+
+        function clearProgress() {
+            if (confirm('Are you sure you want to clear this file? This will delete it from your saves.')) {
+                if (currentSaveId) {
+                    const saves = getAllSaves();
+                    delete saves[currentSaveId];
+                    localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
+                }
+                
+                data = [];
+                headers = [];
+                currentRow = 0;
+                fileName = '';
+                fileType = '';
+                comments = {};
+                currentSaveId = null;
+                
+                uploadSection.classList.remove('hidden');
+                progressSection.style.display = 'none';
+                editorSection.style.display = 'none';
+                fileInput.value = '';
+                fileNameDisplay.textContent = '';
+                
+                localStorage.removeItem(CURRENT_SAVE_KEY);
+                renderSaveList();
+                
+                alert('File cleared! Upload a new file to start again.');
+            }
+        }
+
+        function exportFile(format) {
+            saveState();
+            
+            const includeComments = includeCommentsCheckbox.checked;
+            let exportData;
+            
+            if (includeComments) {
+                // Create headers with comment columns
+                const exportHeaders = [];
+                headers.forEach(header => {
+                    exportHeaders.push(header);
+                    exportHeaders.push(`${header} - Comment`);
+                });
+                
+                // Create data rows with comments
+                const exportRows = data.map((row, rowIndex) => {
+                    const exportRow = [];
+                    row.forEach((cell, colIndex) => {
+                        exportRow.push(cell || '');
+                        exportRow.push(comments[rowIndex]?.[colIndex] || '');
+                    });
+                    return exportRow;
+                });
+                
+                exportData = [exportHeaders, ...exportRows];
+            } else {
+                exportData = [headers, ...data];
+            }
+            
+            // Get current date in YYYY-MM-DD format
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0];
+            
+            // Get base filename without extension
+            const baseName = fileName.replace(/\.[^/.]+$/, '');
+            const newFileName = `${baseName}-reviewed-${dateStr}`;
+            
+            if (format === 'csv') {
+                const csv = Papa.unparse(exportData);
+                downloadFile(csv, `${newFileName}.csv`, 'text/csv');
+            } else {
+                const ws = XLSX.utils.aoa_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+                XLSX.writeFile(wb, `${newFileName}.xlsx`);
+            }
+        }
+
+        function downloadFile(content, fileName, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
