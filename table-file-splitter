@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table File Splitter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        input, button {
+            margin: 10px 0;
+        }
+        #downloads {
+            margin-top: 20px;
+        }
+        #downloads a {
+            display: block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSV/Excel Splitter</h1>
+    <p>Upload a CSV or Excel (.xlsx) file, enter the project name, the number of files to split into, and click Process. The app will split the rows evenly (with headers in each file) and provide download links for the split CSV files named as [project_name]-[date]-[part #].</p>
+    
+    <label for="inputFile">Select CSV or Excel File:</label><br>
+    <input type="file" id="inputFile" accept=".csv,.xlsx"><br>
+    
+    <label for="projectName">Name of the project:</label><br>
+    <input type="text" id="projectName" placeholder="e.g. task_review"><br>
+    
+    <label for="numFiles">Number of Files:</label><br>
+    <input type="number" id="numFiles" min="1" value="2"><br>
+    
+    <button onclick="processFile()">Process</button>
+    
+    <div id="downloads"></div>
+    
+    <script>
+        function processFile() {
+            const fileInput = document.getElementById('inputFile');
+            const projectNameInput = document.getElementById('projectName');
+            const numFilesInput = document.getElementById('numFiles');
+            const downloadsDiv = document.getElementById('downloads');
+            
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a CSV or Excel file.');
+                return;
+            }
+            
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext !== 'csv' && ext !== 'xlsx') {
+                alert('Please select a .csv or .xlsx file.');
+                return;
+            }
+            
+            const projectName = projectNameInput.value.trim();
+            if (!projectName) {
+                alert('Please enter a project name.');
+                return;
+            }
+            
+            const numFiles = parseInt(numFilesInput.value);
+            if (isNaN(numFiles) || numFiles < 1) {
+                alert('Please enter a valid number of files (at least 1).');
+                return;
+            }
+            
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let workbook;
+                    if (ext === 'csv') {
+                        const content = e.target.result;
+                        workbook = XLSX.read(content, {type: 'string'});
+                    } else { // xlsx
+                        const arrayBuffer = e.target.result;
+                        workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array'});
+                    }
+                    
+                    const sheetName = workbook.SheetNames[0];
+                    if (!sheetName) {
+                        alert('No sheets found in the file.');
+                        return;
+                    }
+                    
+                    const worksheet = workbook.Sheets[sheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ''});
+                    
+                    if (rows.length < 2) {
+                        alert('The file must have at least one header row and one data row.');
+                        return;
+                    }
+                    
+                    const headerRow = rows[0];
+                    const dataRows = rows.slice(1).filter(row => row.join('').trim() !== '');
+                    const totalRows = dataRows.length;
+                    
+                    if (totalRows === 0) {
+                        alert('No data rows found in the file.');
+                        return;
+                    }
+                    
+                    const rowsPerFile = Math.floor(totalRows / numFiles);
+                    const extraRows = totalRows % numFiles;
+                    
+                    downloadsDiv.innerHTML = '';
+                    
+                    let startIndex = 0;
+                    for (let i = 1; i <= numFiles; i++) {
+                        const numRowsThisFile = rowsPerFile + (i <= extraRows ? 1 : 0);
+                        const endIndex = startIndex + numRowsThisFile;
+                        const fileRows = dataRows.slice(startIndex, endIndex);
+                        
+                        if (fileRows.length > 0) {
+                            const outputData = [headerRow, ...fileRows];
+                            const ws = XLSX.utils.aoa_to_sheet(outputData);
+                            const csvContent = XLSX.utils.sheet_to_csv(ws);
+                            
+                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const url = URL.createObjectURL(blob);
+                            
+                            const fileName = `${projectName}-${dateStr}-p${i}.csv`;
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = fileName;
+                            a.textContent = `Download ${fileName} (${fileRows.length} rows)`;
+                            downloadsDiv.appendChild(a);
+                            downloadsDiv.appendChild(document.createElement('br'));
+                        }
+                        
+                        startIndex = endIndex;
+                    }
+                    
+                    alert('Processing complete! Download links are below.');
+                } catch (error) {
+                    alert('Error processing the file: ' + error.message);
+                }
+            };
+            
+            reader.onerror = function() {
+                alert('Error reading the file.');
+            };
+            
+            if (ext === 'csv') {
+                reader.readAsText(file);
+            } else {
+                reader.readAsArrayBuffer(file);
+            }
+        }
+    </script>
+</body>
+</html>
