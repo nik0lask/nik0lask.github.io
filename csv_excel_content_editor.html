@@ -1,20 +1,14 @@
-        const progressBar = document.getElementById('progressBar');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const exportBtn = document.getElementById('exportBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const menuIcon = document.getElementById('menuIcon');
-        const menuOverlay = document.getElementById('menuOverlay');
-        const sideMenu = document.getElementById('sideMenu');
-        const saveList = document.getElementById('saveList<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSV/Excel Content Editor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -130,11 +124,11 @@
             .fields-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .container {
                 padding: 20px;
             }
-            
+
             h1 {
                 font-size: 1.5em;
             }
@@ -596,12 +590,17 @@
             color: #000000;
         }
 
+        .row-status {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
         @media (max-width: 768px) {
             .side-menu {
                 width: 280px;
                 left: -280px;
             }
-            
+
             .menu-icon {
                 top: 10px;
                 left: 10px;
@@ -610,19 +609,17 @@
             .button {
                 max-width: none;
             }
-
         }
     </style>
 </head>
+
 <body>
     <div class="menu-icon" id="menuIcon">
         <svg viewBox="0 0 24 24" fill="none">
-            <path d="M3 12h18M3 6h18M3 18h18" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 12h18M3 6h18M3 18h18" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
     </div>
-
     <div class="menu-overlay" id="menuOverlay"></div>
-
     <div class="side-menu" id="sideMenu">
         <h2>💾 Saved Files</h2>
         <div class="save-limit">Max 5 saves • Large files may not fit</div>
@@ -630,31 +627,32 @@
         <div id="storageWarning" class="storage-warning" style="display: none;"></div>
         <ul class="save-list" id="saveList"></ul>
     </div>
-
     <div class="container">
         <h1>📊 CSV/Excel Row Editor</h1>
-        
+
         <div class="upload-section">
             <label for="fileInput" class="upload-label">Choose CSV or Excel File</label>
             <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
             <div class="file-name" id="fileName"></div>
         </div>
-
         <div class="progress-section" id="progressSection">
             <div class="progress-text" id="progressText">Row 1 of 10</div>
             <div class="progress-bar-container">
                 <div class="progress-bar" id="progressBar"></div>
             </div>
         </div>
-
         <div class="editor-section" id="editorSection">
             <div class="fields-grid" id="fieldsGrid"></div>
-            
+            <div class="row-status">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="rejectCheckbox">
+                    <label for="rejectCheckbox">Mark as Rejected</label>
+                </div>
+            </div>
             <div class="navigation-buttons">
                 <button class="btn-primary" id="prevBtn">←</button>
                 <button class="btn-primary" id="nextBtn">→</button>
             </div>
-
             <div class="export-options">
                 <div class="checkbox-group">
                     <input type="checkbox" id="includeComments">
@@ -665,14 +663,12 @@
                     <button class="format-btn" id="excelFormatBtn">Excel</button>
                 </div>
             </div>
-
             <div class="button-group">
                 <button class="btn-secondary" id="exportBtn">Export File</button>
                 <button class="btn-primary" id="clearBtn" style="border: none;">Clear Progress</button>
             </div>
         </div>
     </div>
-
     <div class="modal" id="commentModal">
         <div class="modal-content">
             <div class="modal-header">Add Comment</div>
@@ -683,7 +679,6 @@
             </div>
         </div>
     </div>
-
     <script>
         let data = [];
         let headers = [];
@@ -692,8 +687,8 @@
         let fileName = '';
         let currentSaveId = null;
         let comments = {}; // Store comments by row and column: {rowIndex: {columnIndex: comment}}
+        let rejected = []; // Array of booleans for rejected rows
         let currentCommentField = null;
-
         const fileInput = document.getElementById('fileInput');
         const fileNameDisplay = document.getElementById('fileName');
         const uploadSection = document.querySelector('.upload-section');
@@ -719,14 +714,12 @@
         const includeCommentsCheckbox = document.getElementById('includeComments');
         const csvFormatBtn = document.getElementById('csvFormatBtn');
         const excelFormatBtn = document.getElementById('excelFormatBtn');
-
+        const rejectCheckbox = document.getElementById('rejectCheckbox');
         let selectedFormat = 'csv';
-
         // Use localStorage for persistence with size management
         const SAVES_KEY = 'csvExcelEditorSaves';
         const CURRENT_SAVE_KEY = 'csvExcelEditorCurrentSave';
         const MAX_SAVES = 5; // Limit number of saves to prevent quota issues
-
         fileInput.addEventListener('change', handleFileUpload);
         prevBtn.addEventListener('click', () => navigateRow(-1));
         nextBtn.addEventListener('click', () => navigateRow(1));
@@ -742,7 +735,10 @@
         commentModal.addEventListener('click', (e) => {
             if (e.target === commentModal) closeCommentModal();
         });
-
+        rejectCheckbox.addEventListener('change', (e) => {
+            rejected[currentRow] = e.target.checked;
+            saveState();
+        });
         // Load saved state on page load
         window.addEventListener('load', () => {
             loadCurrentSave();
@@ -752,89 +748,82 @@
                 renderRow();
             }
         });
-
         function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             fileName = file.name;
             fileNameDisplay.textContent = `Selected: ${fileName}`;
-            
+
             const extension = fileName.split('.').pop().toLowerCase();
             fileType = extension;
-
             if (extension === 'csv') {
                 parseCSV(file);
             } else if (extension === 'xlsx' || extension === 'xls') {
                 parseExcel(file);
             }
         }
-
         function parseCSV(file) {
             Papa.parse(file, {
-                complete: function(results) {
+                complete: function (results) {
                     processData(results.data);
                 },
                 skipEmptyLines: true
             });
         }
-
         function parseExcel(file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
+                const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
                 processData(jsonData);
             };
             reader.readAsArrayBuffer(file);
         }
-
         function processData(rawData) {
             headers = rawData[0];
             data = rawData.slice(1).filter(row => row.some(cell => cell !== '' && cell !== null && cell !== undefined));
-            
+
             currentRow = 0;
-            
+            rejected = new Array(data.length).fill(false);
+
             // Create new save
             if (!currentSaveId) {
                 currentSaveId = 'save_' + Date.now();
             }
-            
+
             saveState();
-            
+
             showEditor();
             renderRow();
         }
-
         function showEditor() {
             uploadSection.classList.add('hidden');
             progressSection.style.display = 'block';
             editorSection.style.display = 'block';
         }
-
         function renderRow() {
             fieldsGrid.innerHTML = '';
-            
+
             const row = data[currentRow];
-            
+
             // Initialize comments for this row if not exists
             if (!comments[currentRow]) {
                 comments[currentRow] = {};
             }
-            
+
             headers.forEach((header, index) => {
                 const fieldGroup = document.createElement('div');
                 fieldGroup.className = 'field-group';
-                
+
                 const fieldHeader = document.createElement('div');
                 fieldHeader.className = 'field-header';
-                
+
                 const label = document.createElement('label');
                 label.className = 'field-label';
                 label.textContent = header || `Column ${index + 1}`;
-                
+
                 const commentLink = document.createElement('a');
                 commentLink.className = 'comment-link';
                 commentLink.textContent = comments[currentRow][index] ? '💬 Edit comment' : '+ Add comment';
@@ -846,63 +835,59 @@
                     e.preventDefault();
                     openCommentModal(index);
                 });
-                
+
                 fieldHeader.appendChild(label);
                 fieldHeader.appendChild(commentLink);
-                
+
                 const input = document.createElement('textarea');
                 input.className = 'field-input';
                 input.value = row[index] || '';
                 input.dataset.columnIndex = index;
-                
+
                 input.addEventListener('input', (e) => {
                     data[currentRow][e.target.dataset.columnIndex] = e.target.value;
                 });
-                
+
                 fieldGroup.appendChild(fieldHeader);
                 fieldGroup.appendChild(input);
                 fieldsGrid.appendChild(fieldGroup);
             });
-            
+
+            rejectCheckbox.checked = rejected[currentRow];
+
             updateProgress();
             updateNavigationButtons();
         }
-
         function updateProgress() {
             const total = data.length;
             const current = currentRow + 1;
             progressText.textContent = `Row ${current} of ${total}`;
             progressBar.style.width = `${(current / total) * 100}%`;
         }
-
         function updateNavigationButtons() {
             prevBtn.disabled = currentRow === 0;
             nextBtn.disabled = currentRow === data.length - 1;
         }
-
         function navigateRow(direction) {
             saveState();
-            
+
             currentRow += direction;
             if (currentRow < 0) currentRow = 0;
             if (currentRow >= data.length) currentRow = data.length - 1;
-            
+
             renderRow();
         }
-
         function openCommentModal(columnIndex) {
             currentCommentField = columnIndex;
             commentText.value = comments[currentRow][columnIndex] || '';
             commentModal.classList.add('show');
             commentText.focus();
         }
-
         function closeCommentModal() {
             commentModal.classList.remove('show');
             currentCommentField = null;
             commentText.value = '';
         }
-
         function saveComment() {
             if (currentCommentField !== null) {
                 const comment = commentText.value.trim();
@@ -916,7 +901,6 @@
                 closeCommentModal();
             }
         }
-
         function selectFormat(format) {
             selectedFormat = format;
             if (format === 'csv') {
@@ -927,13 +911,12 @@
                 csvFormatBtn.classList.remove('selected');
             }
         }
-
         function saveState() {
             if (!currentSaveId) return;
-            
+
             try {
                 const saves = getAllSaves();
-                
+
                 // Check if we need to remove oldest save when at limit
                 const saveIds = Object.keys(saves);
                 if (saveIds.length >= MAX_SAVES && !saves[currentSaveId]) {
@@ -941,13 +924,13 @@
                     const oldestId = saveIds
                         .filter(id => id !== currentSaveId)
                         .sort((a, b) => new Date(saves[a].lastModified) - new Date(saves[b].lastModified))[0];
-                    
+
                     if (oldestId) {
                         delete saves[oldestId];
                         showStorageWarning(`Removed oldest save to make room for new file`);
                     }
                 }
-                
+
                 // Save current state
                 saves[currentSaveId] = {
                     data: data,
@@ -956,10 +939,11 @@
                     fileName: fileName,
                     fileType: fileType,
                     comments: comments,
+                    rejected: rejected,
                     lastModified: new Date().toISOString(),
                     id: currentSaveId
                 };
-                
+
                 localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
                 localStorage.setItem(CURRENT_SAVE_KEY, currentSaveId);
                 renderSaveList();
@@ -973,26 +957,25 @@
                 }
             }
         }
-
         function handleQuotaExceeded() {
             showStorageWarning('File too large for storage! Deleting oldest saves...');
-            
+
             const saves = getAllSaves();
             const saveIds = Object.keys(saves);
-            
+
             // Try removing oldest saves until we have space
             const sortedIds = saveIds
                 .filter(id => id !== currentSaveId)
                 .sort((a, b) => new Date(saves[a].lastModified) - new Date(saves[b].lastModified));
-            
+
             let removed = 0;
             for (const oldId of sortedIds) {
                 delete saves[oldId];
                 removed++;
-                
+
                 try {
                     localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
-                    
+
                     // Try to save current again
                     saves[currentSaveId] = {
                         data: data,
@@ -1001,6 +984,7 @@
                         fileName: fileName,
                         fileType: fileType,
                         comments: comments,
+                        rejected: rejected,
                         lastModified: new Date().toISOString(),
                         id: currentSaveId
                     };
@@ -1014,22 +998,19 @@
                     continue;
                 }
             }
-            
+
             // If we still can't save, alert the user
             alert('This file is too large to store in browser memory. You can still edit it, but progress will not be saved. Consider exporting your work frequently.');
             currentSaveId = null;
         }
-
         function showStorageWarning(message) {
             storageWarning.textContent = message;
             storageWarning.style.display = 'block';
             setTimeout(hideStorageWarning, 5000);
         }
-
         function hideStorageWarning() {
             storageWarning.style.display = 'none';
         }
-
         function getAllSaves() {
             try {
                 const saved = localStorage.getItem(SAVES_KEY);
@@ -1039,7 +1020,6 @@
                 return {};
             }
         }
-
         function loadCurrentSave() {
             try {
                 const savedId = localStorage.getItem(CURRENT_SAVE_KEY);
@@ -1050,11 +1030,10 @@
                 console.error('Error loading current save:', e);
             }
         }
-
         function loadSave(saveId) {
             const saves = getAllSaves();
             const save = saves[saveId];
-            
+
             if (save) {
                 data = save.data || [];
                 headers = save.headers || [];
@@ -1062,27 +1041,27 @@
                 fileName = save.fileName || '';
                 fileType = save.fileType || '';
                 comments = save.comments || {};
+                rejected = save.rejected || new Array(data.length).fill(false);
                 currentSaveId = saveId;
-                
+
                 if (fileName) {
                     fileNameDisplay.textContent = `Loaded: ${fileName}`;
                 }
-                
+
                 localStorage.setItem(CURRENT_SAVE_KEY, saveId);
                 renderSaveList();
                 return true;
             }
             return false;
         }
-
         function deleteSave(saveId, event) {
             event.stopPropagation();
-            
+
             if (confirm('Are you sure you want to delete this save?')) {
                 const saves = getAllSaves();
                 delete saves[saveId];
                 localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
-                
+
                 if (currentSaveId === saveId) {
                     // Clear current data
                     data = [];
@@ -1090,44 +1069,44 @@
                     currentRow = 0;
                     fileName = '';
                     fileType = '';
+                    rejected = [];
                     currentSaveId = null;
-                    
+
                     uploadSection.classList.remove('hidden');
                     progressSection.style.display = 'none';
                     editorSection.style.display = 'none';
                     fileInput.value = '';
                     fileNameDisplay.textContent = '';
-                    
+
                     localStorage.removeItem(CURRENT_SAVE_KEY);
                 }
-                
+
                 renderSaveList();
             }
         }
-
         function renderSaveList() {
             const saves = getAllSaves();
             const saveIds = Object.keys(saves);
-            
+
             if (saveIds.length === 0) {
                 saveList.innerHTML = '<div class="empty-state">No saved files yet.<br>Upload a file to get started!</div>';
                 return;
             }
-            
+
             saveList.innerHTML = '';
-            
+
             saveIds.sort((a, b) => {
                 return new Date(saves[b].lastModified) - new Date(saves[a].lastModified);
             });
-            
+
             saveIds.forEach(saveId => {
                 const save = saves[saveId];
                 const li = document.createElement('li');
                 li.className = 'save-item' + (currentSaveId === saveId ? ' active' : '');
-                
+
                 const date = new Date(save.lastModified);
                 const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-                
+
                 li.innerHTML = `
                     <div class="save-info">
                         <div class="save-name">${save.fileName || 'Untitled'}</div>
@@ -1139,7 +1118,7 @@
                         </svg>
                     </button>
                 `;
-                
+
                 li.addEventListener('click', () => {
                     if (loadSave(saveId)) {
                         showEditor();
@@ -1147,16 +1126,14 @@
                         toggleMenu();
                     }
                 });
-                
+
                 saveList.appendChild(li);
             });
         }
-
         function toggleMenu() {
             sideMenu.classList.toggle('open');
             menuOverlay.classList.toggle('visible');
         }
-
         function createNewSave() {
             data = [];
             headers = [];
@@ -1164,19 +1141,19 @@
             fileName = '';
             fileType = '';
             comments = {};
+            rejected = [];
             currentSaveId = null;
-            
+
             uploadSection.classList.remove('hidden');
             progressSection.style.display = 'none';
             editorSection.style.display = 'none';
             fileInput.value = '';
             fileNameDisplay.textContent = '';
-            
+
             localStorage.removeItem(CURRENT_SAVE_KEY);
-            
+
             toggleMenu();
         }
-
         function clearProgress() {
             if (confirm('Are you sure you want to clear this file? This will delete it from your saves.')) {
                 if (currentSaveId) {
@@ -1184,65 +1161,69 @@
                     delete saves[currentSaveId];
                     localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
                 }
-                
+
                 data = [];
                 headers = [];
                 currentRow = 0;
                 fileName = '';
                 fileType = '';
                 comments = {};
+                rejected = [];
                 currentSaveId = null;
-                
+
                 uploadSection.classList.remove('hidden');
                 progressSection.style.display = 'none';
                 editorSection.style.display = 'none';
                 fileInput.value = '';
                 fileNameDisplay.textContent = '';
-                
+
                 localStorage.removeItem(CURRENT_SAVE_KEY);
                 renderSaveList();
-                
+
                 alert('File cleared! Upload a new file to start again.');
             }
         }
-
         function exportFile(format) {
             saveState();
-            
+
             const includeComments = includeCommentsCheckbox.checked;
-            let exportData;
-            
+            let exportHeaders;
+            let exportRows;
+
             if (includeComments) {
-                // Create headers with comment columns
-                const exportHeaders = [];
+                exportHeaders = [];
                 headers.forEach(header => {
                     exportHeaders.push(header);
                     exportHeaders.push(`${header} - Comment`);
                 });
-                
-                // Create data rows with comments
-                const exportRows = data.map((row, rowIndex) => {
+                exportHeaders.push('Rejected');
+
+                exportRows = data.map((row, rowIndex) => {
                     const exportRow = [];
                     row.forEach((cell, colIndex) => {
                         exportRow.push(cell || '');
                         exportRow.push(comments[rowIndex]?.[colIndex] || '');
                     });
+                    exportRow.push(rejected[rowIndex] ? 'TRUE' : 'FALSE');
                     return exportRow;
                 });
-                
-                exportData = [exportHeaders, ...exportRows];
             } else {
-                exportData = [headers, ...data];
+                exportHeaders = [...headers, 'Rejected'];
+                exportRows = data.map((row, rowIndex) => {
+                    return [...row.map(cell => cell || ''), rejected[rowIndex] ? 'TRUE' : 'FALSE'];
+                });
             }
-            
+
+            const exportData = [exportHeaders, ...exportRows];
+
             // Get current date in YYYY-MM-DD format
             const today = new Date();
             const dateStr = today.toISOString().split('T')[0];
-            
+
             // Get base filename without extension
             const baseName = fileName.replace(/\.[^/.]+$/, '');
             const newFileName = `${baseName}-reviewed-${dateStr}`;
-            
+
             if (format === 'csv') {
                 const csv = Papa.unparse(exportData);
                 downloadFile(csv, `${newFileName}.csv`, 'text/csv');
@@ -1253,7 +1234,6 @@
                 XLSX.writeFile(wb, `${newFileName}.xlsx`);
             }
         }
-
         function downloadFile(content, fileName, mimeType) {
             const blob = new Blob([content], { type: mimeType });
             const url = URL.createObjectURL(blob);
@@ -1267,4 +1247,5 @@
         }
     </script>
 </body>
+
 </html>
