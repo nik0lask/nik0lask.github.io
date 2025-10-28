@@ -1,0 +1,286 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo and Document to PDF Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-4 text-center">Photo and Document to PDF Converter</h1>
+        <div id="dropZone" class="border-2 border-dashed border-gray-400 rounded-lg p-4 mb-4 text-center">
+            <p class="text-gray-600">Drag and drop images or documents here or click to upload</p>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png,image/gif,image/bmp,image/webp,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.oasis.opendocument.text" multiple class="hidden">
+        </div>
+        <p class="text-sm text-gray-500 mb-4">Drag previews to rearrange order</p>
+        <div id="preview" class="grid grid-cols-2 gap-2 mb-4"></div>
+        <button id="convertBtn" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition disabled:opacity-50" disabled>
+            Convert to PDF
+        </button>
+    </div>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const convertBtn = document.getElementById('convertBtn');
+        let filesArray = [];
+
+        // Handle drag and drop for file upload
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', () => {
+            handleFiles(fileInput.files);
+        });
+
+        function handleFiles(files) {
+            const validTypes = [
+                'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp',
+                'text/plain', 'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.oasis.opendocument.text'
+            ];
+            Array.from(files).forEach(file => {
+                if (validTypes.includes(file.type) || file.name.match(/\.(doc|docx|odt)$/i)) {
+                    filesArray.push({ file, order: filesArray.length });
+                    displayPreview(file);
+                }
+            });
+            convertBtn.disabled = filesArray.length === 0;
+        }
+
+        function displayPreview(file) {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'relative p-2 bg-gray-100 rounded cursor-move';
+            previewItem.draggable = true;
+            previewItem.dataset.index = filesArray.length - 1;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = 'X';
+            removeBtn.className = 'absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center';
+            removeBtn.onclick = () => {
+                previewItem.remove();
+                filesArray = filesArray.filter(f => f.file !== file);
+                updatePreviewIndices();
+                convertBtn.disabled = filesArray.length === 0;
+            };
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'w-full h-24 object-cover rounded';
+                    previewItem.appendChild(img);
+                    previewItem.appendChild(removeBtn);
+                    preview.appendChild(previewItem);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                const textPreview = document.createElement('div');
+                textPreview.className = 'w-full h-24 bg-gray-200 flex items-center justify-center rounded';
+                textPreview.textContent = file.name;
+                previewItem.appendChild(textPreview);
+                previewItem.appendChild(removeBtn);
+                preview.appendChild(previewItem);
+            }
+
+            // Drag and drop for reordering
+            previewItem.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', previewItem.dataset.index);
+            });
+
+            previewItem.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+
+            previewItem.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                const targetIndex = parseInt(previewItem.dataset.index);
+                if (draggedIndex !== targetIndex) {
+                    const [draggedItem] = filesArray.splice(draggedIndex, 1);
+                    filesArray.splice(targetIndex, 0, draggedItem);
+                    updatePreview();
+                }
+            });
+        }
+
+        function updatePreview() {
+            preview.innerHTML = '';
+            filesArray.forEach((item, index) => {
+                item.order = index;
+                displayPreview(item.file);
+            });
+        }
+
+        function updatePreviewIndices() {
+            Array.from(preview.children).forEach((child, index) => {
+                child.dataset.index = index;
+                filesArray[index].order = index;
+            });
+        }
+
+        async function extractTextFromPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            let text = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                text += textContent.items.map(item => item.str).join(' ') + '\n';
+            }
+            return text;
+        }
+
+        async function extractTextFromDOCX(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            return result.value;
+        }
+
+        async function extractTextFromDOCorODT(file) {
+            // Basic text extraction for DOC/ODT (simplified, as no direct browser library exists)
+            // In a real app, server-side processing or more complex parsing would be needed
+            return `Text extraction for ${file.name} (DOC/ODT) is limited in browser. File name: ${file.name}`;
+        }
+
+        convertBtn.addEventListener('click', async () => {
+            if (filesArray.length === 0) return;
+
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            filesArray.sort((a, b) => a.order - b.order);
+
+            for (let i = 0; i < filesArray.length; i++) {
+                const { file } = filesArray[i];
+                if (i > 0) pdf.addPage();
+
+                if (file.type.startsWith('image/')) {
+                    const imgData = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.readAsDataURL(file);
+                    });
+
+                    const img = new Image();
+                    img.src = imgData;
+                    await new Promise((resolve) => { img.onload = resolve; });
+
+                    const imgProps = pdf.getImageProperties(imgData);
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const imgWidth = imgProps.width;
+                    const imgHeight = imgProps.height;
+                    const aspectRatio = imgWidth / imgHeight;
+
+                    let scaledWidth = pdfWidth - 20;
+                    let scaledHeight = scaledWidth / aspectRatio;
+
+                    if (scaledHeight > pdfHeight - 20) {
+                        scaledHeight = pdfHeight - 20;
+                        scaledWidth = scaledHeight * aspectRatio;
+                    }
+
+                    const x = (pdfWidth - scaledWidth) / 2;
+                    const y = (pdfHeight - scaledHeight) / 2;
+
+                    pdf.addImage(imgData, file.type.split('/')[1].toUpperCase(), x, y, scaledWidth, scaledHeight);
+                } else {
+                    let text = '';
+                    if (file.type === 'text/plain') {
+                        text = await file.text();
+                    } else if (file.type === 'application/pdf') {
+                        text = await extractTextFromPDF(file);
+                    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                        text = await extractTextFromDOCX(file);
+                    } else if (file.type === 'application/msword' || file.type === 'application/vnd.oasis.opendocument.text') {
+                        text = await extractTextFromDOCorODT(file);
+                    }
+
+                    pdf.setFontSize(12);
+                    pdf.setFont('helvetica', 'normal');
+                    const lines = pdf.splitTextToSize(text, pdf.internal.pageSize.getWidth() - 20);
+                    let y = 10;
+                    lines.forEach(line => {
+                        if (y > pdf.internal.pageSize.getHeight() - 10) {
+                            pdf.addPage();
+                            y = 10;
+                        }
+                        pdf.text(line, 10, y);
+                        y += 7;
+                    });
+                }
+            }
+
+            pdf.save('combined_document.pdf');
+        });
+    </script>
+</body>
+</html>
