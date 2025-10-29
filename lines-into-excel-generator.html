@@ -804,7 +804,12 @@
             } else {
                 Object.entries(duplicates).forEach(([header, dups]) => {
                     if (dups.length > 0) {
-                        summaryHTML += `<p><strong>Column "${header}":</strong></p><ul>`;
+                        let totalDups = 0;
+                        dups.forEach(dup => {
+                            totalDups += (dup.count - 1);
+                        });
+                        summaryHTML += `<p><strong>Column "${header}":</strong></p>`;
+                        summaryHTML += `<p>Overall number of duplicates: ${totalDups}</p><ul>`;
 
                         dups.forEach(dup => {
                             summaryHTML += `<li>"${dup.value}" appears ${dup.count} times</li>`;
