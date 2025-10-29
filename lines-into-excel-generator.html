@@ -651,7 +651,7 @@
             createColumnSelector(headers);
 
             // Then analyze selected columns for duplicates
-            updateDuplicatesAndPreview(headers, data);
+            updateDuplicatesAndPreview();
 
             return { headers, data };
         }
@@ -659,16 +659,23 @@
         function createColumnSelector(headers) {
             const selectorDiv = document.getElementById('columnSelector');
             selectorDiv.style.display = 'block';
+
+            // Preserve existing checked states
+            const checkedMap = new Map();
+            const currentCheckboxes = document.querySelectorAll('input[name="column-check"]');
+            currentCheckboxes.forEach(cb => {
+                checkedMap.set(cb.value, cb.checked);
+            });
+
             selectorDiv.innerHTML = '<h4>Select columns to check for duplicates:</h4><div class="column-selector">';
 
             headers.forEach(header => {
-                // Check if checkbox already exists to preserve state
-                const existingCheckbox = document.getElementById(`check-${header}`);
-                const isChecked = existingCheckbox ? existingCheckbox.checked : true;
+                const safeHeader = header.replace(/[^a-zA-Z0-9]/g, '-');
+                const isChecked = checkedMap.has(header) ? checkedMap.get(header) : true;
 
                 selectorDiv.innerHTML += `
                     <label>
-                        <input type="checkbox" id="check-${header}" name="column-check" value="${header}" ${isChecked ? 'checked' : ''} onchange="updateDuplicatesAndPreview()">
+                        <input type="checkbox" id="check-${safeHeader}" name="column-check" value="${header}" ${isChecked ? 'checked' : ''} onchange="updateDuplicatesAndPreview()">
                         ${header}
                     </label>
                 `;
