@@ -341,6 +341,19 @@
         .popup .new-session-btn:hover {
             background-color: #d32f2f;
         }
+
+        .dup-list-header {
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+            align-items: center;
+            cursor: pointer;
+            padding-bottom: 5px;
+        }
+
+        .dup-chart {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 
@@ -709,7 +722,7 @@
             generatePreview(headers, data, duplicates);
 
             // Generate duplicate summary
-            generateDuplicateSummary(duplicates);
+            generateDuplicateSummary(duplicates, data);
         }
 
         function getSelectedColumns() {
@@ -781,7 +794,54 @@
             <div class="row-count">Total rows: <strong>${data.length}</strong></div>` + tableHTML;
         }
 
-        function generateDuplicateSummary(duplicates) {
+        function getCumulativeDuplicates(data, header) {
+            const cumuls = [];
+            const seen = new Map();
+            let totalDups = 0;
+
+            for (let i = 0; i < data.length; i++) {
+                const value = data[i][header];
+                if (value && value !== '') {
+                    if (seen.has(value)) {
+                        totalDups += 1;
+                    }
+                    seen.set(value, (seen.get(value) || 0) + 1);
+                }
+                cumuls.push(totalDups);
+            }
+            return cumuls;
+        }
+
+        function drawLineGraph(canvasId, cumuls) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const len = cumuls.length;
+
+            if (len < 2) return;
+
+            const maxY = Math.max(...cumuls);
+            if (maxY === 0) return;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.beginPath();
+            ctx.moveTo(0, height - (cumuls[0] / maxY) * height);
+
+            for (let i = 1; i < len; i++) {
+                const x = (i / (len - 1)) * width;
+                const y = height - (cumuls[i] / maxY) * height;
+                ctx.lineTo(x, y);
+            }
+
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function generateDuplicateSummary(duplicates, data) {
             const summaryDiv = document.getElementById('duplicateSummary');
             summaryDiv.style.display = 'block';
 
@@ -808,25 +868,56 @@
                         dups.forEach(dup => {
                             totalDups += (dup.count - 1);
                         });
+                        const safeHeader = header.replace(/[^a-zA-Z0-9]/g, '-');
                         summaryHTML += `<p><strong>Column "${header}":</strong></p>`;
-                        summaryHTML += `<p>Overall number of duplicates: ${totalDups}</p><ul>`;
+                        summaryHTML += `<p>Overall number of duplicates: ${totalDups}</p>`;
+                        summaryHTML += `<canvas id="dup-chart-${safeHeader}" class="dup-chart" width="200" height="100"></canvas>`;
+                        summaryHTML += `<div class="dup-list-header" onclick="toggleDup('${safeHeader}')">
+                            <h4>Duplicate Details</h4>
+                            <button class="toggle-btn" id="dupToggle-${safeHeader}">+</button>
+                        </div>`;
+                        summaryHTML += `<div class="summary-content" id="dupContent-${safeHeader}" style="display: none;"><ul>`;
 
                         dups.forEach(dup => {
                             summaryHTML += `<li>"${dup.value}" appears ${dup.count} times</li>`;
                         });
 
-                        summaryHTML += '</ul>';
+                        summaryHTML += '</ul></div>';
                     }
                 });
             }
 
             summaryHTML += '</div></div>';
             summaryDiv.innerHTML = summaryHTML;
+
+            // Draw graphs after HTML is set
+            if (hasDuplicates) {
+                Object.entries(duplicates).forEach(([header, dups]) => {
+                    if (dups.length > 0) {
+                        const cumuls = getCumulativeDuplicates(data, header);
+                        const safeHeader = header.replace(/[^a-zA-Z0-9]/g, '-');
+                        drawLineGraph(`dup-chart-${safeHeader}`, cumuls);
+                    }
+                });
+            }
         }
 
         function toggleSummary() {
             const content = document.getElementById('summaryContent');
             const button = document.getElementById('summaryToggle');
+
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                button.textContent = '−';
+            } else {
+                content.style.display = 'none';
+                button.textContent = '+';
+            }
+        }
+
+        function toggleDup(safeHeader) {
+            const content = document.getElementById(`dupContent-${safeHeader}`);
+            const button = document.getElementById(`dupToggle-${safeHeader}`);
 
             if (content.style.display === 'none') {
                 content.style.display = 'block';
